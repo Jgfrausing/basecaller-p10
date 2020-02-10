@@ -229,4 +229,7 @@ model.load_weights("models/e00538_dis478.h5")
 
 
 d = next(prepData.train_gen())[0]['the_input'][:100]
-model.predict(d)
+predictions = model.predict(d)
+
+print(predictions)
+
