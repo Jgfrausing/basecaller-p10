@@ -19,6 +19,7 @@ from tensorflow.keras.callbacks import Callback
 import matplotlib.pyplot as plt
 from functools import reduce
 import editdistance
+from itertools import groupby
 
 labelBaseMap = {
     0: "A",
@@ -149,6 +150,14 @@ class PrepData(Sequence):
         return next(self.train_gen())
 
 prepData = PrepData(filename)
+#with h5py.File(filename, 'r') as h5file:
+#    readID = list(h5file['Reads'].keys())
+#    REF = deque(h5file['Reads'][readID[0]]['Reference'][()])
+    
+#res = [labelBaseMap[base_index] for base_index in REF]
+#print("".join(res))
+#print(REF.length)
+#exit(0)
 
 
 
@@ -228,8 +237,29 @@ model = Model(inputs=[input_data], outputs=y_pred, name="chiron")
 model.load_weights("models/e00538_dis478.h5")
 
 
-d = next(prepData.train_gen())[0]['the_input'][:100]
+d = next(prepData.train_gen())[0]['the_input']
 predictions = model.predict(d)
 
-print(predictions)
+
+def select_predicted_base(predictions):
+    bases_with_blanks = [[p.tolist().index(max(p.tolist())) for p in vector_predictions] for vector_predictions in predictions]
+    return [mapping(seq) for seq in bases_with_blanks]
+
+        
+def mapping(full_path, blank_pos=4):
+    """Perform a many to one mapping in the CTC paper, merge the repeat and remove the blank
+    Input:
+        full_path:a vector of path, e.g. [1,0,3,2,2,3]
+        blank_pos:The number regarded as blank"""
+    full_path = np.asarray(full_path)
+    merge_repeated = np.asarray([k for k, g in groupby(full_path)])
+    blank_index = np.argwhere(merge_repeated == blank_pos)
+    removed = np.delete(merge_repeated, blank_index)
+    return removed
+
+   
+res = select_predicted_base(predictions)
+res = [[labelBaseMap[base_index] for base_index in sequence] for sequence in res]
+res = ["".join(s) for s in res]
+print(res)
 
