@@ -1,6 +1,6 @@
 # Custom
 dataset.pickle
-
+data/
 
 # Created by https://www.gitignore.io/api/linux,macos,python,windows,jupyternotebooks,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=linux,macos,python,windows,jupyternotebooks,visualstudiocode
