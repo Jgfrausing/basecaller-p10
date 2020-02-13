@@ -236,6 +236,8 @@ model = Model(inputs=[input_data], outputs=y_pred, name="chiron")
 
 model.load_weights("models/e00538_dis478.h5")
 
+model.save("models/chiron-compatible")
+'''
 
 d = next(prepData.train_gen())[0]['the_input']
 predictions = model.predict(d)
@@ -262,4 +264,6 @@ res = select_predicted_base(predictions)
 res = [[labelBaseMap[base_index] for base_index in sequence] for sequence in res]
 res = ["".join(s) for s in res]
 print(res)
+
+'''
 
