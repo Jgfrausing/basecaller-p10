@@ -1,0 +1,1 @@
+{"cnn": {"model": "chiron_copy"}, "rnn": {"layer_num": 3, "hidden_num": 100, "cell_type": "LSTM","layer_type":"normal"}, "opt_method": "Adam", "fl_gamma": 2}
