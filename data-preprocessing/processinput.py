@@ -32,58 +32,58 @@ class DataCollection(Iterable, Sized):
         train_y = []
         test_X  = []
         test_y  = []
+        
         with h5py.File(self.filename, 'r') as h5file:
             signal = list(self.normalise(h5file['Reads'][readID]['Dacs'][()]))
             ref_to_signal = deque(list(h5file['Reads'][readID]['Ref_to_signal'][()]))
             reference = deque(h5file['Reads'][readID]['Reference'][()])
 
         train_validate_split = round(len(reference)*self.train_validate_split)
-
         base_count = len(reference)
-        previous_start_index = 0
-        previous_last_index = base_count-1
-        last_start_signal = ref_to_signal[-1]-self.window_size
-        signal_queue = deque()
+        start_index = 0
+        last_index = base_count-1
+        last_start_signal = ref_to_signal[base_count-1]-self.window_size
         for signal_start in range(ref_to_signal[0], last_start_signal, self.stride): 
             signal_end = signal_start+self.window_size
 
             # Get signal of len = window_size
-            signal_queue.extend([[x] for x in signal[signal_start:signal_end]])
+            current_signal = [[x] for x in signal[signal_start:signal_end]]
 
             # Get labels
-            labels = deque()
-            for index in range(previous_start_index, previous_last_index):
+            labels = []
+            for index in range(start_index, base_count):
                 base_location = ref_to_signal[index]
                 if base_location < signal_start:
                     # Runtime optimization
                     # Update index such that we don't need to interate over previous bases on next iteration
-                    previous_start_index = index+1 
+                    start_index = index+1 
                 elif base_location > signal_end:
                     # Runtime optimizationl
-                    # Last base found
-                    previous_last_index = index
+                    # Last base found - Used for train/test-split
+                    last_index = index
                     break 
                 if base_location >= signal_start:
                     # Base is in the window so we add it to labels
                     labels.append(reference[index])
-
+            
             # Ensure that we have enough labels to train/predict
-            # TODO: Does this even make sense?
             if len(labels) > self.min_labels:
-                if len(ref_to_signal) < train_validate_split:
+                if last_index < train_validate_split:
                     # Adding first part of signal to training
-                    train_X.append(list(signal_queue))
-                    train_y.append(list(labels))
-                else:
+                    train_X.append(current_signal)
+                    train_y.append(labels)
+                elif start_index > train_validate_split:
                     # ... And last part to test
-                    test_X.append(list(signal_queue))
-                    test_y.append(list(labels))
+                    test_X.append(current_signal)
+                    test_y.append(labels)
+                #else: parts overlapping train_validate_split ignored
 
         return train_X, train_y, test_X, test_y
 
     def __yield_next_read(self): #-> Union[Union[Unknown, Unknown], Union[Unknown, Unknown]]:
         for pos in range(len(self)):
-            print(f"Processing {pos}")
+            print(f"Processing {self.readIDs[pos]} ({pos})")
+            
             train_x, train_y, test_x, test_y = self.__process_read(self.readIDs[pos])
 
             train_x = np.array(train_x)
@@ -91,9 +91,10 @@ class DataCollection(Iterable, Sized):
             test_x  = np.array(test_x)
             test_y  = np.array(test_y)
 
-            train_X_lens = np.array([[95] for x in train_x], dtype="float32")
+            train_X_lens = np.array([[len(x)] for x in train_x], dtype="float32")
             train_y_lens = np.array([[len(x)] for x in train_y], dtype="float32")
-            train_y_padded = np.array([r + [5]*(self.get_max_label_len()-len(r)) for r in train_y], dtype='float32')
+            
+            train_y_padded = train_y #np.array([r + [self.stride]*(self.get_max_label_len()-len(r)) for r in train_y], dtype='float32')
             X = {
                 'the_input': train_x,
                 'the_labels': train_y_padded,
