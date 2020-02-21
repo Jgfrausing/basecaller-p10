@@ -3,7 +3,7 @@ import h5py as h5py
 import numpy as np
 
 
-class DataCollection(C.Iterable, C.Sized):
+class DataCollection(C.Sized):
     def __init__(self, filename: str, train_validate_split: float = 0.8, min_labels: int = 5, window_size: int = 300, stride: int = 5):
         self.filename = filename
         self.train_validate_split = train_validate_split
@@ -77,14 +77,14 @@ class DataCollection(C.Iterable, C.Sized):
                     test_y.append(labels)
                 # else: parts overlapping train_validate_split ignored
 
-        return train_X, train_y, test_X, test_y
+        return train_X, train_y, test_X, test_y, reference
 
     # -> Union[Union[Unknown, Unknown], Union[Unknown, Unknown]]:
-    def __yield_next_read(self):
+    def generator(self):
         for pos in range(len(self)):
             print(f"Processing {self.readIDs[pos]} ({pos})")
 
-            train_x, train_y, test_x, test_y = self.__process_read(
+            train_x, train_y, test_x, test_y, reference = self.__process_read(
                 self.readIDs[pos])
 
             train_x = np.array(train_x)
@@ -104,21 +104,12 @@ class DataCollection(C.Iterable, C.Sized):
                 'the_labels': train_y_padded,
                 'input_length': train_X_lens,
                 'label_length': train_y_lens,
-                'unpadded_labels': train_y
+                'unpadded_labels': train_y,
+                'full_reference' : reference
             }
             y = {'ctc': np.zeros([len(train_x)])}
             yield (X, y), (test_x, test_y)
 
-    def test_gen(self):
-        while True:
-            tgd, self.test_gen_data = self.test_gen_data, ([], [])
-            yield tgd
 
     def __len__(self):
         return len(self.readIDs)
-
-    def __next__(self):
-        return next(self.__yield_next_read())
-
-    def __iter__(self):
-        pass

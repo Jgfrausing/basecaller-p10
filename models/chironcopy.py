@@ -23,6 +23,9 @@ from functools import reduce
 import editdistance
 from itertools import groupby
 
+from bc.preprocessing.processinput import DataCollection
+import bc.utils.sequence as postprocessing
+
 labelBaseMap = {
     0: "A",
     1: "C",
@@ -37,21 +40,29 @@ class ChironCopy():
         data_collection = DataCollection(filename)
         self.try_set_gpu()
         
-        model = self.load_model()
+        model = self.load_model(data_collection.get_max_label_len())
         model.load_weights(model_path)
 
-        for d in data_collection:
-            predictions = model.predict(d[0]['the_input'])
+        for (d, _),_ in data_collection.generator():
+            reference = postprocessing.numeric_to_bases_sequence(d['full_reference'], labelBaseMap)
+            output = model.predict(d['the_input'])
+            predictions = postprocessing.decode(output, labelBaseMap.values())
+            
+            assembled = postprocessing.assemble(predictions, 300, 5, labelBaseMap)
+            
+            error = postprocessing.calc_sequence_error_metrics(reference, assembled)
+            print(assembled[:100])
+            print(reference[:100])
 
     def train(self, model_path: str, data_path: str = "/mnt/sdb/taiyaki_mapped/mapped_umi16to9.hdf5"):
                  
         data_collection = DataCollection(filename)
         self.try_set_gpu()
 
-        model = self.load_model()
+        model = self.load_model(data_collection.get_max_label_len())
         model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer='adam')
         
-        save_cb = SaveCB("models", tf.keras.backend.function([input_data], [y_pred]), prepData)
+        save_cb = SaveCB("models", tf.keras.backend.function(model.inputs, [y_pred]), data_collection)
 
         for idx in range(len(data_collection)):
             print(f"Epoch {idx}/{len(data_collection)}")
@@ -104,7 +115,7 @@ class ChironCopy():
         lstm_1b = LSTM(200, return_sequences=True, go_backwards=True, name=f"blstm{block}-rev")(upper)
         return Add(name=f"blstm{block}-add")([lstm_1a, lstm_1b])
 
-    def load_model(self):
+    def load_model(self, max_label_length: int):
         input_data = Input(name="the_input", shape=(300,1), dtype="float32")
         inner = self.make_res_block(input_data, 1)
         inner = self.make_res_block(inner, 2)
@@ -120,7 +131,7 @@ class ChironCopy():
 
         y_pred = Activation("softmax", name="softmax")(inner)
 
-        labels = Input(name='the_labels', shape=(prepData.get_max_label_len()), dtype='float32')
+        labels = Input(name='the_labels', shape=(max_label_length), dtype='float32')
         input_length = Input(name='input_length', shape=(1), dtype='int64')
         label_length = Input(name='label_length', shape=(1), dtype='int64')
 
@@ -163,14 +174,20 @@ class SaveCB(Callback):
 parser = argparse.ArgumentParser()
 parser.add_argument("--p", help="predict", action="store_true")
 parser.add_argument("--t", help="train", action="store_true")
+parser.add_argument("-default_data", help="use data on server", action="store_true")
+parser.add_argument("-mock_data", help="use mock data", action="store_true")
+parser.add_argument("-existing_model", help="use exixting model", action="store_true")
 parser.add_argument("model_path", help="path to model")
-parser.add_argument("file_path", help="path to data file")
+parser.add_argument("data_path", help="path to data file")
 
 args = parser.parse_args()
 if (args.p and args.t) or not (args.p or args.t):
     print("Must either train or predict")
-elif args.p:
-    ChironCopy().predict(args.model_path, args.file_path)
+    exit()
+data =args.data_path # "/mnt/sdb/taiyaki_mapped/mapped_umi16to9.hdf5" if args.default_data else args.data_path
+model = "chiron-copy.h5" if args.existing_model else args.model_path
+if args.p:
+    ChironCopy().predict(model, data)
 elif args.t:
-    ChironCopy().train(args.model_path, args.file_path)
+    ChironCopy().train(model, data)
     
