@@ -81,11 +81,11 @@ class DataCollection(Sized):
         return train_X, train_y, test_X, test_y, reference
 
     def generator(self):
-    """Generator that can be used as iterator.
+        """Generator that can be used as iterator.
 
-    Returns:
-        training_dict, (test_signal, test_labels)
-    """
+        Returns:
+            training_dict, (test_signal, test_labels)
+        """
 
         for pos in range(len(self)):
             print(f"Processing {self.readIDs[pos]} ({pos})")
