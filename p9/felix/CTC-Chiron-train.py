@@ -254,7 +254,7 @@ class SaveCB(Callback):
 
         if self.best_dist is None or valloss < self.best_dist:
             self.best_dist = valloss
-            self.model.save_weights(os.path.join(self.model_output_dir, f'{e{epoch:05d}_dis{round(valloss*100)}.h5'))
+            self.model.save_weights(os.path.join(self.model_output_dir, f'{epoch:05d}_dis{round(valloss*100)}.h5'))
 
 save_cb = SaveCB("models", tf.keras.backend.function([input_data], [y_pred]), prepData)
 

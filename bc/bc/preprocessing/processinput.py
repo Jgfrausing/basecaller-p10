@@ -1,10 +1,10 @@
-import collections as C
+from collections import Sized
 import h5py as h5py
 import numpy as np
 
 
-class DataCollection(C.Sized):
-    def __init__(self, filename: str, train_validate_split: float = 0.8, min_labels: int = 5, window_size: int = 300, stride: int = 5):
+class DataCollection(Sized):
+    def __init__(self, filename: str, train_validate_split: float = 0.8, min_labels: int = 5, window_size: int = 300, stride: int = 5, min_value = 0, max_value = 850):
         self.filename = filename
         self.train_validate_split = train_validate_split
         self.min_labels = min_labels
@@ -14,17 +14,20 @@ class DataCollection(C.Sized):
         self.max_label_len = 50
         self.window_size = window_size
         self.stride = stride
+        self.min_value = min_value
+        self.max_value = max_value
         with h5py.File(filename, 'r') as h5file:
             self.readIDs = list(h5file['Reads'].keys())
 
-    def get_max_label_len(self):
+    def get_max_label_len(self) -> int:
         return self.max_label_len
 
-    def normalise(self, dac):
-        dmin = min(dac)
-        dmax = max(dac)
-        return [(d-dmin)/(dmax-dmin) for d in dac]
+    def __normalise(self, dac, dmin = 0, dmax = 850):
+        return (np.clip(dac, dmin, dmax)-dmin)/(dmax-dmin)
 
+    def __standalize(self, dac, mean = 395.27, std = 80, dmin = 0, dmax = 850):
+        return list((np.clip(dac, dmin, dmax) - mean) / std)
+    
     def __process_read(self, readID: str):
         train_X = []
         train_y = []
@@ -32,16 +35,15 @@ class DataCollection(C.Sized):
         test_y = []
 
         with h5py.File(self.filename, 'r') as h5file:
-            signal = list(self.normalise(h5file['Reads'][readID]['Dacs'][()]))
-            ref_to_signal = C.deque(
-                list(h5file['Reads'][readID]['Ref_to_signal'][()]))
-            reference = C.deque(h5file['Reads'][readID]['Reference'][()])
+            signal = self.__standalize(h5file['Reads'][readID]['Dacs'][()])
+            ref_to_signal = h5file['Reads'][readID]['Ref_to_signal'][()]
+            reference = h5file['Reads'][readID]['Reference'][()]
 
         train_validate_split = round(len(reference)*self.train_validate_split)
         base_count = len(reference)
         start_index = 0
         last_index = base_count-1
-        last_start_signal = ref_to_signal[base_count-1]-self.window_size
+        last_start_signal = ref_to_signal[-1]-self.window_size
         for signal_start in range(ref_to_signal[0], last_start_signal, self.stride):
             signal_end = signal_start+self.window_size
 
@@ -57,7 +59,6 @@ class DataCollection(C.Sized):
                     # Update index such that we don't need to interate over previous bases on next iteration
                     start_index = index+1
                 elif base_location > signal_end:
-                    # Runtime optimizationl
                     # Last base found - Used for train/test-split
                     last_index = index
                     break
@@ -79,8 +80,13 @@ class DataCollection(C.Sized):
 
         return train_X, train_y, test_X, test_y, reference
 
-    # -> Union[Union[Unknown, Unknown], Union[Unknown, Unknown]]:
     def generator(self):
+    """Generator that can be used as iterator.
+
+    Returns:
+        training_dict, (test_signal, test_labels)
+    """
+
         for pos in range(len(self)):
             print(f"Processing {self.readIDs[pos]} ({pos})")
 
@@ -101,15 +107,29 @@ class DataCollection(C.Sized):
             train_y_padded = train_y
             X = {
                 'the_input': train_x,
-                'the_labels': train_y_padded,
+                'the_labels': train_y,
                 'input_length': train_X_lens,
                 'label_length': train_y_lens,
-                'unpadded_labels': train_y,
                 'full_reference' : reference
             }
-            y = {'ctc': np.zeros([len(train_x)])}
-            yield (X, y), (test_x, test_y)
+            #y = {'ctc': np.zeros([len(train_x)])}
+            yield X, (test_x, test_y)
 
 
     def __len__(self):
         return len(self.readIDs)
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

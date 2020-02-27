@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import h5py
 import numpy as np
+import functools
 from multiprocessing import Pool
 from multiprocessing.pool import ThreadPool
 from functools import partial, reduce
@@ -40,34 +41,44 @@ class ChironCopy():
         data_collection = DataCollection(filename)
         self.try_set_gpu()
         
-        model = self.load_model(data_collection.get_max_label_len())
+        model = self.load_model(data_collection, True)
         model.load_weights(model_path)
 
-        for (d, _),_ in data_collection.generator():
-            reference = postprocessing.numeric_to_bases_sequence(d['full_reference'], labelBaseMap)
+        error_sum = 0
+        identity_sum = 0
+        signal_total = 0
+        for d, _ in data_collection.generator():
+            print(f'Data loaded')
+            print(f'Reference found')
             output = model.predict(d['the_input'])
             predictions = postprocessing.decode(output, labelBaseMap.values())
+            print(f'Decoded')
+            #assembled = postprocessing.assemble(predictions, 300, 5, labelBaseMap)
+            labels = d['the_labels']
+            #error = postprocessing.calc_sequence_error_metrics(reference[:1500], assembled[:1500])
             
-            assembled = postprocessing.assemble(predictions, 300, 5, labelBaseMap)
-            
-            error = postprocessing.calc_sequence_error_metrics(reference, assembled)
-            print(assembled[:100])
-            print(reference[:100])
+            for ind in range(len(predictions)):
+                current_labels = postprocessing.numeric_to_bases_sequence(labels[ind], labelBaseMap)
+                (error, identity, _, _, _) = postprocessing.calc_sequence_error_metrics(predictions[ind], current_labels)
+                error_sum += error
+                identity_sum += identity
+                signal_total += 1
+            print(f'Errorrate: {error_sum/signal_total}')
+            print(f'Identity: {identity_sum/signal_total}')
 
     def train(self, model_path: str, data_path: str = "/mnt/sdb/taiyaki_mapped/mapped_umi16to9.hdf5"):
                  
-        data_collection = DataCollection(filename)
+        data_collection = DataCollection(data_path)
         self.try_set_gpu()
 
-        model = self.load_model(data_collection.get_max_label_len())
-        model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer='adam')
-        
-        save_cb = SaveCB("models", tf.keras.backend.function(model.inputs, [y_pred]), data_collection)
-
-        for idx in range(len(data_collection)):
+        model, save_cb = self.load_model(data_collection, False)
+        model.load_weights(model_path)
+        idx = 0
+        for a, _ in data_collection.generator():
+            idx += 1
             print(f"Epoch {idx}/{len(data_collection)}")
-            (a, _), _ = next(data_collection)
-            model.fit(a[0], a[1], initial_epoch=idx, epochs=idx+1, callbacks=[save_cb]) 
+            print(a['the_input'][0])
+            model.fit(a['the_input'], a['the_labels'], initial_epoch=idx, epochs=idx+1, callbacks=[save_cb]) 
                                     
     def try_set_gpu(self):
         gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -88,6 +99,8 @@ class ChironCopy():
         y_pred = y_pred[:, 5:, :]
         return kb.ctc_batch_cost(labels, y_pred, input_length, label_length)
 
+    def ctc_loss(y_true, y_pred, input_length, label_length, real_y_true_ts, sample_weight):
+        return tf.keras.backend.ctc_batch_cost(real_y_true_ts, y_pred, input_length, label_length)
 
     def make_res_block(self, upper, block):
         res = Conv1D(256, 1,
@@ -115,7 +128,7 @@ class ChironCopy():
         lstm_1b = LSTM(200, return_sequences=True, go_backwards=True, name=f"blstm{block}-rev")(upper)
         return Add(name=f"blstm{block}-add")([lstm_1a, lstm_1b])
 
-    def load_model(self, max_label_length: int):
+    def load_model(self, data_collection, prediction:bool):
         input_data = Input(name="the_input", shape=(300,1), dtype="float32")
         inner = self.make_res_block(input_data, 1)
         inner = self.make_res_block(inner, 2)
@@ -131,15 +144,21 @@ class ChironCopy():
 
         y_pred = Activation("softmax", name="softmax")(inner)
 
-        labels = Input(name='the_labels', shape=(max_label_length), dtype='float32')
+        labels = Input(name='the_labels', shape=(data_collection.get_max_label_len()), dtype='float32')
         input_length = Input(name='input_length', shape=(1), dtype='int64')
         label_length = Input(name='label_length', shape=(1), dtype='int64')
 
         loss_out = Lambda(self.ctc_lambda_func, output_shape=(1,), name='ctc')([y_pred, labels, input_length, label_length])
 
-        model = Model(inputs=[input_data], outputs=y_pred, name="chiron")
+        if prediction:
+            return Model(inputs=[input_data], outputs=y_pred, name="chiron")
+        else:
+            model = Model(inputs=[input_data, labels, input_length, label_length], outputs=loss_out, name="chiron")
+            model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer='adam')
 
-        return model
+            save_cb = SaveCB("models", tf.keras.backend.function(model.inputs, [y_pred]), data_collection)
+
+            return model, save_cb 
 
 class SaveCB(Callback):
     def __init__(self, model_output_dir, test_func, prepper):
@@ -149,6 +168,7 @@ class SaveCB(Callback):
         self.best_dist = None
 
     def calculate_loss(self, X, y, testbatchsize=1000):
+        return 10
         editdis = 0
         for b in range(0, len(X), testbatchsize):
             predicted = decode_batch(self.test_func, X[b:b+testbatchsize])
@@ -158,6 +178,7 @@ class SaveCB(Callback):
         return editdis/len(y)
 
     def on_epoch_end(self, epoch, logs={}):
+        pass
         test_X, test_y = next(self.prepper.test_gen())
         train_X, train_y = self.prepper.last_train_gen_data[0]['the_input'], self.prepper.last_train_gen_data[0]['unpadded_labels']
 
