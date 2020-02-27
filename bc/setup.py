@@ -10,5 +10,6 @@ setup(name='bc',
       packages=['bc'],
       install_requires=[
           'biopython',
+          'fast_ctc_decode',
       ],
       zip_safe=False)
