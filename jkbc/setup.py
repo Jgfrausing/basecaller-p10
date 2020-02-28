@@ -13,5 +13,6 @@ setup(name='jkbc',
           'fast_ctc_decode',
           'numpy',
           'h5py',
+          'pytest',
       ],
       zip_safe=False)
