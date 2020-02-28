@@ -1,20 +1,34 @@
-from typing import List, Dict, Tuple
 import difflib
+from itertools import groupby
+from typing import List, Dict, NamedTuple, Tuple, NewType
 
 import numpy as np
 from fast_ctc_decode import beam_search
+
 import bc.utils.chiron.assembly as chiron
-from itertools import groupby
 
 
-def calc_sequence_error_metrics(actual: str, predicted: str) -> Tuple[float, float, float, float, float]:
+# TYPES
+class Rates:
+    """A 'struct' containing the different types of rates (deletion, insertion, mismatch, identity, error)"""
+    def __init__(self, deletion: float, insertion: float, mismatch: float, identity: float, error: float):
+        self.deletion = deletion
+        self.insertion = insertion
+        self.mismatch = mismatch
+        self.identity = identity
+        self.error = error
+
+PredictionTensor = NewType('PredictionTensor', np.ndarray[np.ndarray[np.ndarray[float]]])
+
+
+def calc_sequence_error_metrics(actual: str, predicted: str) -> Rates:
     """Calculate several error metrics related to the editdistance between two sequences.
 
     Args:
         actual: the correct sequence
         predicted: the predicted sequence
     Returns:
-        a tuple of metrics in decimal percentage (error, identity, deletion, insertion, mismatch)
+        a Rates object with each of the different types of rates as fields
     """
 
     metrics = __calc_metrics_from_seq_matcher(
@@ -27,7 +41,7 @@ def calc_sequence_error_metrics(actual: str, predicted: str) -> Tuple[float, flo
     rate_identity: float = 1 - rate_deletion - rate_mismatch
     rate_error: float = rate_deletion + rate_insertion + rate_mismatch
 
-    return rate_error, rate_identity, rate_deletion, rate_insertion, rate_mismatch
+    return Rates(rate_deletion, rate_insertion, rate_mismatch, rate_identity, rate_error)
 
 
 def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int, str]) -> str:
@@ -36,7 +50,7 @@ def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int
     Args:
         reads: the reads
         window_size: size of window
-        strid: length of stride
+        stride: length of stride
         alphabet: dictionary mapping from numbers to letters
     Returns:
         a fully assembled string
@@ -48,37 +62,63 @@ def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int
         reads, jump_step_ratio)
     assembled_as_numbers: List[int] = np.argmax(
         assembled_with_probabilities, axis=0)
-    assembled: str = concat_str([alphabet[x] for x in assembled_as_numbers])
+    assembled: str = __concat_str([alphabet[x] for x in assembled_as_numbers])
+    
     return assembled
 
-def numeric_to_bases_sequence(lst, alphabet):
-    return concat_str([alphabet[x] for x in lst])
 
-def decode(predictions, alphabet, beam_size=5, threshold=0.1):
-    """
-    Decode model posteriors to sequence
-    """
-    alphabet = concat_str(alphabet)
+def convert_idx_to_base_sequence(lst: List[int], alphabet: str) -> str:
+    """Converts a list of base indexes into a str given an alphabet, e.g. [0, 1, 3] -> 'ACT'"""
+
+    assert max(lst) < len(alphabet), "List contains indexes larger than alphabet size - 1."
+    assert min(lst) >= 0, "List contains negative indexes."
+
+    return __concat_str([alphabet[x] for x in lst])
+
+
+def decode(predictions: PredictionTensor, alphabet: List[str], beam_size: int = 5, threshold: float = 0.1) -> List[str]:
+    """Decode model posteriors to sequence.
     
-    decoded = [beam_search(window.astype(np.float32), alphabet, beam_size, threshold) for window in predictions]
-    decoded = [remove_duplicates(seq) for seq in decoded]
-    
-    return [seq.replace('-','') for seq in decoded]
+    Args:
+        predictions: the reads are [WindowCount][WindowSize][AlphabetSize]
+        alphabet: ordered list of labels (characters)
+        beam_size: the number of candidates to consider
+        threshold: characters below this threshold are not considered
+    Returns:
+        a decoded string
+    """
+    alphabet_str: str = __concat_str(alphabet)
+
+    # apply beam search on each window
+    decoded: List[str] = [beam_search(window.astype(np.float32), alphabet_str, beam_size, threshold) for window in predictions]
+
+    return [__remove_duplicates_and_blanks(seq) for seq in decoded]
+
 
 # HELPERS
-def remove_duplicates(s):
-     return (''.join(i for i, _ in groupby(s)))
 
-def split(word): 
-    return [char for char in word]  
-      
-def concat_str(ls: List[str]) -> str:
+def __remove_duplicates_and_blanks(s: str, blank_char: str = '-') -> str:
+    """Removes duplicates first and then blanks, e.g. 'AA--ATT' -> 'A-AT' -> 'AAT'"""
+    return __remove_blanks(__remove_duplicates(s), blank_char = blank_char)
+
+
+def __remove_blanks(s: str, blank_char: str = '-') -> str:
+    """Removes blanks from a string, e.g. 'A-GA-T' -> 'AGAT'."""
+    return s.replace(blank_char, '')
+
+
+def __remove_duplicates(s: str) -> str:
+    """Removes duplicates in a string, e.g. 'AA--ATT' -> 'A-AT'."""
+    return ''.join(i for i, _ in groupby(s))
+
+
+def __concat_str(ls: List[str]) -> str:
     """Concatenates a list of strings into a single string."""
     return "".join(ls)
 
 
 def __calc_metrics_from_seq_matcher(seq_matcher: difflib.SequenceMatcher) -> Dict[str, int]:
-    """Calculate the metrics from a SequenceMatcher and store it in a tag-index dictionary. (Warning: Inefficient)"""
+    """Calculate the metrics from a SequenceMatcher and store it in a tag-index dictionary."""
     counts: Dict[str, int] = {'insert': 0,
                               'delete': 0, 'equal': 0, 'replace': 0}
     for tag, i1, i2, j1, j2 in seq_matcher.get_opcodes():
@@ -88,5 +128,3 @@ def __calc_metrics_from_seq_matcher(seq_matcher: difflib.SequenceMatcher) -> Dic
         else:
             counts[tag] += i2 - i1
     return counts
-
-
