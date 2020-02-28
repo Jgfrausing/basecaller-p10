@@ -1,14 +1,14 @@
 import difflib
 from itertools import groupby
-from typing import List, Dict, NamedTuple, Tuple, NewType
+from typing import List, Dict
 
 import numpy as np
 from fast_ctc_decode import beam_search
 
 import bc.utils.chiron.assembly as chiron
+import bc.types as t
 
 
-# TYPES
 class Rates:
     """A 'struct' containing the different types of rates (deletion, insertion, mismatch, identity, error)"""
     def __init__(self, deletion: float, insertion: float, mismatch: float, identity: float, error: float):
@@ -18,11 +18,9 @@ class Rates:
         self.identity = identity
         self.error = error
 
-PredictionTensor = NewType('PredictionTensor', np.ndarray[np.ndarray[np.ndarray[float]]])
-
 
 def calc_sequence_error_metrics(actual: str, predicted: str) -> Rates:
-    """Calculate several error metrics related to the editdistance between two sequences.
+    """Calculate several error metrics related to the edit-distance between two sequences.
 
     Args:
         actual: the correct sequence
@@ -60,8 +58,7 @@ def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int
 
     assembled_with_probabilities: List[List[float]] = chiron.simple_assembly(
         reads, jump_step_ratio)
-    assembled_as_numbers: List[int] = np.argmax(
-        assembled_with_probabilities, axis=0)
+    assembled_as_numbers: np.ndarray[int] = np.argmax(assembled_with_probabilities, axis=0)
     assembled: str = __concat_str([alphabet[x] for x in assembled_as_numbers])
     
     return assembled
@@ -76,7 +73,7 @@ def convert_idx_to_base_sequence(lst: List[int], alphabet: str) -> str:
     return __concat_str([alphabet[x] for x in lst])
 
 
-def decode(predictions: PredictionTensor, alphabet: List[str], beam_size: int = 5, threshold: float = 0.1) -> List[str]:
+def decode(predictions: t.Tensor3D, alphabet: List[str], beam_size: int = 5, threshold: float = 0.1) -> List[str]:
     """Decode model posteriors to sequence.
     
     Args:
@@ -90,7 +87,8 @@ def decode(predictions: PredictionTensor, alphabet: List[str], beam_size: int = 
     alphabet_str: str = __concat_str(alphabet)
 
     # apply beam search on each window
-    decoded: List[str] = [beam_search(window.astype(np.float32), alphabet_str, beam_size, threshold) for window in predictions]
+    decoded: List[str] = [beam_search(window.astype(np.float32), alphabet_str, beam_size, threshold)
+                          for window in predictions]
 
     return [__remove_duplicates_and_blanks(seq) for seq in decoded]
 

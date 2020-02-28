@@ -11,6 +11,7 @@ setup(name='bc',
       install_requires=[
           'biopython',
           'fast_ctc_decode',
+          'numpy',
           'h5py',
       ],
       zip_safe=False)
