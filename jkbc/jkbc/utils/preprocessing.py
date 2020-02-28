@@ -1,4 +1,4 @@
-import collections
+import collections.abc as abc
 
 import h5py as h5py
 import numpy as np
@@ -31,7 +31,7 @@ class ReadObject:
 
 
 # TODO: Implement missing Generator functions
-class SignalCollection(collections.Sequence, collections.Generator):
+class SignalCollection(abc.Sequence, abc.Generator):
     """
     An iterator and generator for getting signal data from HDF5 files.
 
