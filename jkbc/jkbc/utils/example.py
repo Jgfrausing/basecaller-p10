@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 from typing import List, Dict
 
-import bc.utils.postprocessing as post
+import jkbc.utils.postprocessing as post
 
 
 def assemble_example() -> str:

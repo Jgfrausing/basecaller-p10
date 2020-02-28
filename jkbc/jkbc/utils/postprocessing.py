@@ -5,8 +5,8 @@ from typing import List, Dict
 import numpy as np
 from fast_ctc_decode import beam_search
 
-import bc.utils.chiron.assembly as chiron
-import bc.types as t
+import jkbc.utils.chiron.assembly as chiron
+import jkbc.types as t
 
 
 class Rates:

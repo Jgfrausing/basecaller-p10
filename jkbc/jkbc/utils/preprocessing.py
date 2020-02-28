@@ -3,8 +3,8 @@ import collections
 import h5py as h5py
 import numpy as np
 
-import bc.types as t
-import bc.utils.files as bc_files
+import jkbc.types as t
+import jkbc.utils.files as bc_files
 
 BLANK_ID = 4
 

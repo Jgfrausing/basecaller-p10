@@ -4,7 +4,7 @@ import pathlib as pl
 import h5py
 import numpy as np
 
-import bc.types as t
+import jkbc.types as t
 
 
 def make_dummy_hdf5_file(file_path: t.PathLike = pl.Path("test_dataset.hdf5"), reads: int = 5000,

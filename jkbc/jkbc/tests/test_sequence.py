@@ -1,10 +1,10 @@
 from unittest import TestCase
 from typing import List, Dict
 
-import bc.utils.sequence as sequence
+import jkbc.utils.postprocessing as postprocessing
 
 
-class TestSequence(TestCase):
+class TestPostprocessing(TestCase):
     def test_assembles_correctly(self):
         # Arrange
         reads: List[str] = ['AAGGCCTAGCT',
@@ -14,7 +14,7 @@ class TestSequence(TestCase):
         alphabet: Dict[int, str] = {0: 'A', 1: 'C', 2: 'G', 3: 'T'}
 
         # Act
-        result: str = sequence.assemble(reads, window_size, stride, alphabet)
+        result: str = postprocessing.assemble(reads, window_size, stride, alphabet)
 
         # Assert
         self.assertEqual("AAGGCCTAGCTA", result)
@@ -25,7 +25,7 @@ class TestSequence(TestCase):
         s2: str = 'AAAGGCCA'
 
         # Act
-        metrics = sequence.calc_sequence_error_metrics(s1, s2)
+        metrics = postprocessing.__calc_sequence_error_metrics(s1, s2)
         _, rate_identity, _, _, _ = metrics
 
         # Assert
