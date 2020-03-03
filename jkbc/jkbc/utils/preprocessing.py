@@ -31,7 +31,7 @@ class ReadObject:
 
 
 # TODO: Implement missing Generator functions
-class SignalCollection(abc.Sequence, abc.Generator):
+class SignalCollection(abc.Sequence):
     """
     An iterator and generator for getting signal data from HDF5 files.
 
