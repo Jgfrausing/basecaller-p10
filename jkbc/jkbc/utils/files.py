@@ -11,7 +11,7 @@ def make_dummy_hdf5_file(file_path: t.PathLike = pl.Path("test_dataset.hdf5"), r
                          base_count: int = 100) -> None:
     """Creates a hdf5 file with dummy values for signal, ref2sig, and references."""
     fake_signal = np.random.rand(reads)
-    fake_ref_to_signal = np.asarray(range(0, reads, reads // base_count))
+    fake_ref_to_signal = np.asarray(range(0, reads+1, reads // base_count))
     fake_reference = np.zeros(base_count)
 
     with h5py.File(file_path, 'w') as file_new:
@@ -40,7 +40,7 @@ def copy_part_of_file_to(filepath_original: t.PathLike = "/mnt/sdb/taiyaki_mappe
 def write_read_info_to_open_file(file: h5py.File, read_id: str, signal: np.ndarray, ref_to_signal: np.ndarray,
                                  reference: np.ndarray) -> None:
     """Writes the read-info to an open HDF5 file."""
-    assert len(ref_to_signal) == len(reference), "ref_to_signal and reference has different lengths"
+    assert len(ref_to_signal)-1 == len(reference), "ref_to_signal must contain exactly one more element than reference"
 
     file.create_dataset(f'Reads/{read_id}/Dacs',
                         data=signal)
@@ -68,6 +68,6 @@ def get_read_info_from_open_file(hdf5_file: h5py.File, read_id: str) -> Tuple[np
     ref_to_signal: np.ndarray = hdf5_file['Reads'][read_id]['Ref_to_signal'][()]
     reference: np.ndarray = hdf5_file['Reads'][read_id]['Reference'][()]
 
-    assert len(ref_to_signal) == len(reference), "ref_to_signal and reference has different lengths"
+    assert len(ref_to_signal)-1 == len(reference), "ref_to_signal must contain exactly one more element than reference"
 
     return signal, ref_to_signal, reference
