@@ -1,10 +1,14 @@
 import collections.abc as abc
+import functools as ft
 
 import h5py as h5py
 import numpy as np
+import torch
+
 
 import jkbc.types as t
 import jkbc.utils.files as bc_files
+import jkbc.utils.postprocessing as pop
 
 BLANK_ID = 4
 
@@ -21,15 +25,50 @@ class ReadObject:
         reference: the full genome reference
     """
 
-    def __init__(self, x: t.Tensor2D, y: t.Tensor2D, x_lengths: t.Tensor1D, y_lengths: t.Tensor1D,
-                 reference: t.Tensor1D):
+    def __init__(self, x: t.Tensor2D, y: t.Tensor2D, reference: t.Tensor1D):
         self.x = x
         self.y = y
-        self.x_lengths = x_lengths
-        self.y_lengths = y_lengths
         self.reference = reference
 
 
+def convert_to_databunch(data: t.Tuple[np.ndarray, np.ndarray], split: float, device: torch.device = torch.device("cpu"), window_size: int=300) -> t.Tuple[t.TensorDataset, t.TensorDataset]:
+    """
+    Converts a data object into test/validate TensorDatasets
+    
+    Usage:
+        train, valid = convert_to_databunch(data, split=0.8)
+        databunch = DataBunch(train, valid, BS=64)
+    """
+    # Unpack
+    x, y = data
+    
+    # Turn it into tensors
+    x_train = torch.tensor(x.reshape(x.shape[0], x.shape[1], 1), dtype = torch.float, device = device)
+    y_train = torch.tensor(y, dtype = torch.long, device = device)
+        
+    # Get split
+    split_train = int(len(x_train)*split)
+    split_valid = split_train-window_size
+
+    # Split into test/valid sets
+    x_train_t = x_train[:-split_train]
+    y_train_t = y_train[:-split_train]
+    x_valid_t = x_train[-split_valid:]
+    y_valid_t = y_train[-split_valid:]
+    
+    # Create TensorDataset
+    ds_train = t.TensorDataset(x_train_t, y_train_t)
+    ds_valid = t.TensorDataset(x_valid_t, y_valid_t)
+    
+    return ds_train, ds_valid
+    
+def get_y_lengths(y_pred_len:int, max_y_len:int, batch_size=int) -> t.Tuple[np.ndarray, np.ndarray]:
+    prediction_lengths = torch.full(size=(batch_size,), fill_value=y_pred_len, dtype=torch.long)
+    label_lengths = torch.full(size=(batch_size,), fill_value=max_y_len, dtype=torch.long)
+    
+    return prediction_lengths, label_lengths
+    
+    
 # TODO: Implement missing Generator functions
 class SignalCollection(abc.Sequence):
     """
@@ -58,11 +97,13 @@ class SignalCollection(abc.Sequence):
         Returns signal_windows, label_windows, and a reference for a single signal.
         """
         x, y = [], []
-
+        
         read_id = self.read_idx[read_id_index]
-
-        signal, ref_to_signal, reference = bc_files.get_read_info_from_file(self.filename, read_id)
-
+        print(f"Processing {read_id} ({read_id_index})")
+        
+        dac, ref_to_signal, reference = bc_files.get_read_info_from_file(self.filename, read_id)
+        signal = _standardize(dac)
+        
         num_of_bases = len(reference)
         index_base_start = 0
         last_start_signal = ref_to_signal[-1] - self.window_size
@@ -92,8 +133,8 @@ class SignalCollection(abc.Sequence):
 
             x.append(window_signal)
             y.append(labels)
-
-        return x, y, reference
+        
+        return ReadObject(x, y, reference)
 
     def __iter__(self):
         """Initiates the iterator"""
@@ -111,17 +152,7 @@ class SignalCollection(abc.Sequence):
         """
 
         for pos in range(len(self)):
-            print(f"Processing {self.read_idx[pos]} ({pos})")
-
-            x, y, reference = self[pos]
-
-            x_lengths = np.array([[len(x_)] for x_ in x], dtype="float32")
-            y_lengths = np.array([[len(y_)] for y_ in y], dtype="float32")
-
-            # Maybe this is needed? Felix used it.
-            # y_pred = {'ctc': np.zeros([len(train_x)])}
-
-            yield ReadObject(x, y, x_lengths, y_lengths, reference)
+            yield self[pos] 
 
     def __len__(self):
         return len(self.read_idx)
@@ -137,11 +168,11 @@ def add_label_padding(labels: t.Tensor2D, fixed_label_len: int, padding_id: int 
     return np.array([l + [padding_id] * (fixed_label_len - len(l)) for l in labels], dtype='float32')
 
 # TODO: Complete type signature
-def __normalize(dac, dmin: float = 0, dmax: float = 850):
+def _normalize(dac, dmin: float = 0, dmax: float = 850):
     """Normalize data based on min and max values"""
     return (np.clip(dac, dmin, dmax) - dmin) / (dmax - dmin)
 
 # TODO: Complete type signature
-def __standardize(dac, mean: float = 395.27, std:float = 80, dmin:float = 0, dmax: float = 850):
+def _standardize(dac, mean: float = 395.27, std:float = 80, dmin:float = 0, dmax: float = 850):
     """Standardize data based on"""
     return list((np.clip(dac, dmin, dmax) - mean) / std)

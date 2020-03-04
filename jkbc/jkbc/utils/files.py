@@ -1,5 +1,8 @@
-from typing import Tuple
+import os
 import pathlib as pl
+import fastai.basics as fastai
+import feather
+import pandas as pd
 
 import h5py
 import numpy as np
@@ -50,13 +53,13 @@ def write_read_info_to_open_file(file: h5py.File, read_id: str, signal: np.ndarr
                         data=reference)
 
 
-def get_read_info_from_file(file_path: t.PathLike, read_id: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_read_info_from_file(file_path: t.PathLike, read_id: str) -> t.Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Get signal, ref_to_signal, and reference for a given read_id from a hdf5 file."""
     with h5py.File(file_path, 'r') as hdf5_file:
         return get_read_info_from_open_file(hdf5_file, read_id)
 
 
-def get_read_info_from_open_file(hdf5_file: h5py.File, read_id: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_read_info_from_open_file(hdf5_file: h5py.File, read_id: str) -> t.Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Get signal, ref_to_signal, and reference for a given read_id from an open hdf5 file.
     Returns:
         signal: np.ndarray[int]
@@ -71,3 +74,20 @@ def get_read_info_from_open_file(hdf5_file: h5py.File, read_id: str) -> Tuple[np
     assert len(ref_to_signal)-1 == len(reference), "ref_to_signal must contain exactly one more element than reference"
 
     return signal, ref_to_signal, reference
+
+def write_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray, np.ndarray]) -> None:
+    x, y = data
+    __make_dir(folder_path)
+    
+    feather.write_dataframe(pd.DataFrame(data=list(x)), os.path.join(folder_path, 'x'))
+    feather.write_dataframe(pd.DataFrame(data=list(y)), os.path.join(folder_path, 'y'))
+
+def read_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, np.ndarray]:
+    x = feather.read_dataframe(os.path.join(folder_path, 'x'))
+    y = feather.read_dataframe(os.path.join(folder_path, 'y'))
+    
+    return x.to_numpy(), y.to_numpy(dtype=np.float32)
+
+def __make_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
