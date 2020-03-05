@@ -80,7 +80,7 @@ folder_name = f'Range{args.f}-{args.t}-FixLabelLen{args.ll}'
 output_path = base_dir/folder_name
 
 print('Making feather files')
-data = make_file(args.data_path, output_path, range(args.f, args.t), args.ll, args.b)
+data = make_file(args.data_path, output_path, range(int(args.f), int(args.t)), int(args.ll), int(args.b))
 print('Files created')
 
 if args.run_test:
