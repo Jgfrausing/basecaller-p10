@@ -11,7 +11,7 @@ import jkbc.types as t
 # DEFAULT PARAMETERS
 FIX_LABEL_LEN  = 60  # Needed to avoid issues with jacked arrays
 BLANK_ID       = 4
-FOLDERPATH     = 'feather-files/'
+FOLDERPATH     = 'data/feather-files/'
 
 def make_file(data_path: t.PathLike, folder_path: t.PathLike, ran: range, label_len: int, padding_id: int) -> None:
     # Get data range
