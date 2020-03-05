@@ -61,7 +61,7 @@ In the **CLAAUDIA frontend terminal**:
       * Copy this token (which is a string of ASCII characters)
 
 On a computer **in the AAU network/on the VPN**:
-  * Access Jupyter Lab on the website `http://nv-ai-<node-id>.srv.aau.dk:8860/lab?<token>` with the `node-id` and `token` replaced.
+  * Access Jupyter Lab on the website `http://nv-ai-<node-id>.srv.aau.dk:8860/lab?token=<token>` with the `node-id` and `token` replaced.
 
 
 ## Various tips
