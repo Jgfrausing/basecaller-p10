@@ -62,3 +62,8 @@ In the **CLAAUDIA frontend terminal**:
 
 On a computer **in the AAU network/on the VPN**:
   * Access Jupyter Lab on the website `http://nv-ai-<node-id>.srv.aau.dk:8860/lab?<token>` with the `node-id` and `token` replaced.
+
+
+## Various tips
+* Save your conda environment to a file: `conda env export | grep -v "^prefix: " > <NAME_OF_FILE>.yml`
+* Create a new conda environment using a file: `conda env create -f <NAME_OF_FILE>.yml`
