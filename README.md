@@ -106,7 +106,7 @@ conda activate jkbc
     * Create a new conda environment using the conda_env.yml file: `conda env create -f conda_env.yml` (this will take a while)
 9. Create a Jupyter kernel that uses the new conda environment.
     * Setup conda for bash: `conda init bash`
-    * Load the created .bashrc file: `source /user/sutdent.aau.dk/jfraus14/.bashrc` (replace username)
+    * Load the created .bashrc file: `source /user/student.aau.dk/jfraus14/.bashrc` (replace username)
     * Activate the conda environment: `conda activate jkbc`
     * Create the kernel for jupyter `ipython kernel install --user --name=jkbc`
 10. Install the JKBC library locally using pip: `pip install -e jkbc`
@@ -115,7 +115,7 @@ conda activate jkbc
     * For example `http://127.0.0.1:<port>/?token=<token>`
     * Figure out the id of the node you are running on by looking in your prompt.
       * Its name will be something like `kbargs15@student.aau.dk@nv-ai-fe<id>:~$`.
-    * Make a note of these/save three pieces of information: id, port, and token
+    * Make save these three pieces of information: id, port, and token
 12. Detach (exit without kill) from the tmux terminal: press `ctrl+b` and then `d`
 13. Connect to the Jupyter Lab in your browser
     * While being on the AAU network, connect to: `http://nv-ai-<id>.srv.aau.dk:<port>/lab?token=<token>`
