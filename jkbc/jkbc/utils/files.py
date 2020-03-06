@@ -1,6 +1,6 @@
 import os
 import pathlib as pl
-import feather
+import feather as feather
 import pandas as pd
 
 import h5py
