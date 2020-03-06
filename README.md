@@ -91,7 +91,7 @@ On a computer **in the AAU network/on the VPN**:
 ```
 conda activate jkbc
 (jkbc)$ ipython kernel install --user --name=<any_name_for_kernel>
-``` 
+```
 
 ## Walkthrough: Initial run
 1. Be inside the AAU Network or run through the VPN.
@@ -109,7 +109,7 @@ conda activate jkbc
     * Load the created .bashrc file: `source /user/student.aau.dk/jfraus14/.bashrc` (replace username)
     * Activate the conda environment: `conda activate jkbc`
     * Create the kernel for jupyter `ipython kernel install --user --name=jkbc`
-10. Install the JKBC library locally using pip: `pip install -e jkbc`
+10. Install the JKBC library locally using pip: `pip install -e jkbc/`
 11. Run Jupyter Lab `jupyter lab --port=8860 --ip=0.0.0.0`
     * It will print out the port actually used (might differ if occupied) and an access token.
     * For example `http://127.0.0.1:<port>/?token=<token>`

@@ -31,13 +31,13 @@ class ReadObject:
         self.reference = reference
 
 
-def convert_to_databunch(data: t.Tuple[np.ndarray, np.ndarray], split: float, device: torch.device = torch.device("cpu"), window_size: int = 300) -> t.Tuple[t.TensorDataset, t.TensorDataset]:
+def convert_to_datasets(data: t.Tuple[np.ndarray, np.ndarray], split: float, device: torch.device = torch.device("cpu"), window_size: int = 300) -> t.Tuple[t.TensorDataset, t.TensorDataset]:
     """
     Converts a data object into test/validate TensorDatasets
 
     Usage:
-        train, valid = convert_to_databunch(data, split=0.8)
-        databunch = DataBunch(train, valid, BS=64)
+        train, valid = convert_to_datasets((x, y_padded), split=0.8)
+        data = DataBunch.create(train, valid, bs=64)
     """
     # Unpack
     x, y = data
