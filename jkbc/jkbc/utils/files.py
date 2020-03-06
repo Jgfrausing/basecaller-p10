@@ -1,6 +1,5 @@
 import os
 import pathlib as pl
-import fastai.basics as fastai
 import feather
 import pandas as pd
 
@@ -19,7 +18,8 @@ def make_dummy_hdf5_file(file_path: t.PathLike = pl.Path("test_dataset.hdf5"), r
 
     with h5py.File(file_path, 'w') as file_new:
         read_id = "readId001"
-        write_read_info_to_open_file(file_new, read_id, fake_signal, fake_ref_to_signal, fake_reference)
+        write_read_info_to_open_file(
+            file_new, read_id, fake_signal, fake_ref_to_signal, fake_reference)
 
 
 def copy_part_of_file_to(filepath_original: t.PathLike = "/mnt/sdb/taiyaki_mapped/mapped_umi16to9.hdf5",
@@ -36,14 +36,17 @@ def copy_part_of_file_to(filepath_original: t.PathLike = "/mnt/sdb/taiyaki_mappe
 
             for read_id in range(round(len(read_ids) * dec_percentage)):
                 read_id = read_ids[read_id]
-                signal, ref_to_signal, reference = get_read_info_from_open_file(file_original, read_id)
-                write_read_info_to_open_file(file_new, read_id, signal, ref_to_signal, reference)
+                signal, ref_to_signal, reference = get_read_info_from_open_file(
+                    file_original, read_id)
+                write_read_info_to_open_file(
+                    file_new, read_id, signal, ref_to_signal, reference)
 
 
 def write_read_info_to_open_file(file: h5py.File, read_id: str, signal: np.ndarray, ref_to_signal: np.ndarray,
                                  reference: np.ndarray) -> None:
     """Writes the read-info to an open HDF5 file."""
-    assert len(ref_to_signal)-1 == len(reference), "ref_to_signal must contain exactly one more element than reference"
+    assert len(ref_to_signal)-1 == len(
+        reference), "ref_to_signal must contain exactly one more element than reference"
 
     file.create_dataset(f'Reads/{read_id}/Dacs',
                         data=signal)
@@ -68,25 +71,32 @@ def get_read_info_from_open_file(hdf5_file: h5py.File, read_id: str) -> t.Tuple[
     """
     # [()] transforms a DataSet into an ndarray
     signal: np.ndarray = hdf5_file['Reads'][read_id]['Dacs'][()]
-    ref_to_signal: np.ndarray = hdf5_file['Reads'][read_id]['Ref_to_signal'][()]
+    ref_to_signal: np.ndarray = hdf5_file['Reads'][read_id]['Ref_to_signal'][(
+    )]
     reference: np.ndarray = hdf5_file['Reads'][read_id]['Reference'][()]
 
-    assert len(ref_to_signal)-1 == len(reference), "ref_to_signal must contain exactly one more element than reference"
+    assert len(ref_to_signal)-1 == len(
+        reference), "ref_to_signal must contain exactly one more element than reference"
 
     return signal, ref_to_signal, reference
+
 
 def write_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray, np.ndarray]) -> None:
     x, y = data
     __make_dir(folder_path)
-    
-    feather.write_dataframe(pd.DataFrame(data=list(x)), os.path.join(folder_path, 'x'))
-    feather.write_dataframe(pd.DataFrame(data=list(y)), os.path.join(folder_path, 'y'))
+
+    feather.write_dataframe(pd.DataFrame(data=list(x)),
+                            os.path.join(folder_path, 'x'))
+    feather.write_dataframe(pd.DataFrame(data=list(y)),
+                            os.path.join(folder_path, 'y'))
+
 
 def read_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, np.ndarray]:
     x = feather.read_dataframe(os.path.join(folder_path, 'x'))
     y = feather.read_dataframe(os.path.join(folder_path, 'y'))
-    
+
     return x.to_numpy(), y.to_numpy(dtype=np.float32)
+
 
 def __make_dir(path):
     if not os.path.exists(path):

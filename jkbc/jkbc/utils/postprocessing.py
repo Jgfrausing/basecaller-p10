@@ -11,6 +11,7 @@ import jkbc.types as t
 
 class Rates:
     """A 'struct' containing the different types of rates (deletion, insertion, mismatch, identity, error)"""
+
     def __init__(self, deletion: float, insertion: float, mismatch: float, identity: float, error: float):
         self.deletion = deletion
         self.insertion = insertion
@@ -58,16 +59,18 @@ def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int
 
     assembled_with_probabilities: List[List[float]] = chiron.simple_assembly(
         reads, jump_step_ratio)
-    assembled_as_numbers: np.ndarray[int] = np.argmax(assembled_with_probabilities, axis=0)
+    assembled_as_numbers: np.ndarray[int] = np.argmax(
+        assembled_with_probabilities, axis=0)
     assembled: str = __concat_str([alphabet[x] for x in assembled_as_numbers])
-    
+
     return assembled
 
 
 def convert_idx_to_base_sequence(lst: List[int], alphabet: str) -> str:
     """Converts a list of base indexes into a str given an alphabet, e.g. [0, 1, 3] -> 'ACT'"""
 
-    assert max(lst) < len(alphabet), "List contains indexes larger than alphabet size - 1."
+    assert max(lst) < len(
+        alphabet), "List contains indexes larger than alphabet size - 1."
     assert min(lst) >= 0, "List contains negative indexes."
 
     return __concat_str([alphabet[x] for x in lst])
@@ -75,7 +78,7 @@ def convert_idx_to_base_sequence(lst: List[int], alphabet: str) -> str:
 
 def decode(predictions: t.Tensor3D, alphabet: List[str], beam_size: int = 5, threshold: float = 0.1) -> List[str]:
     """Decode model posteriors to sequence.
-    
+
     Args:
         predictions: the reads are [WindowCount][WindowSize][AlphabetSize]
         alphabet: ordered list of labels (characters)
@@ -97,7 +100,7 @@ def decode(predictions: t.Tensor3D, alphabet: List[str], beam_size: int = 5, thr
 
 def __remove_duplicates_and_blanks(s: str, blank_char: str = '-') -> str:
     """Removes duplicates first and then blanks, e.g. 'AA--ATT' -> 'A-AT' -> 'AAT'"""
-    return __remove_blanks(__remove_duplicates(s), blank_char = blank_char)
+    return __remove_blanks(__remove_duplicates(s), blank_char=blank_char)
 
 
 def __remove_blanks(s: str, blank_char: str = '-') -> str:
