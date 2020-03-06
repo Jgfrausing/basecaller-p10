@@ -52,10 +52,10 @@ def convert_to_datasets(data: t.Tuple[np.ndarray, np.ndarray], split: float, dev
     split_valid = split_train-window_size
 
     # Split into test/valid sets
-    x_train_t = x_train[:-split_train]
-    y_train_t = y_train[:-split_train]
-    x_valid_t = x_train[-split_valid:]
-    y_valid_t = y_train[-split_valid:]
+    x_train_t = x_train[:split_train]
+    y_train_t = y_train[:split_train]
+    x_valid_t = x_train[split_valid:]
+    y_valid_t = y_train[split_valid:]
 
     # Create TensorDataset
     ds_train = t.TensorDataset(x_train_t, y_train_t)
