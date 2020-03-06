@@ -92,3 +92,31 @@ On a computer **in the AAU network/on the VPN**:
 conda activate jkbc
 (jkbc)$ ipython kernel install --user --name=<any_name_for_kernel>
 ``` 
+
+## Walkthrough: Initial run
+1. Be inside the AAU Network or run through the VPN.
+2. SSH into the CLAAUDIA frontend: `ssh <username>@ai-pilot.srv.aau.dk`
+3. Create the Singularity image (like a docker image): `srun singularity pull docker://nvcr.io/nvidia/pytorch:20.02-py3`
+4. Create the runuser directory (usage unknown): `mkdir runuser`
+5. Open a tmux terminal named "jupyter", which allows you to exit without terminating jobs: `tmux new -s jupyter`
+6. Run a shell in the container: `srun --gres=gpu:1 --pty singularity shell -B $HOME/runuser/:/run/user/$(id -u) --nv pytorch_20.02-py3.sif`
+7. Clone git repo: `git clone https://github.com/Jgfrausing/basecaller-p10.git` 
+8. Create a conda environment from the conda_env.yml file in the repo: 
+    * Cd into the repository folder: `cd basecaller-p10`
+    * Create a new conda environment using the conda_env.yml file: `conda env create -f conda_env.yml` (this will take a while)
+9. Create a Jupyter kernel that uses the new conda environment.
+    * Setup conda for bash: `conda init bash`
+    * Load the created .bashrc file: `source /user/student.aau.dk/jfraus14/.bashrc` (replace username)
+    * Activate the conda environment: `conda activate jkbc`
+    * Create the kernel for jupyter `ipython kernel install --user --name=jkbc`
+10. Install the JKBC library locally using pip: `pip install -e jkbc`
+11. Run Jupyter Lab `jupyter lab --port=8860 --ip=0.0.0.0`
+    * It will print out the port actually used (might differ if occupied) and an access token.
+    * For example `http://127.0.0.1:<port>/?token=<token>`
+    * Figure out the id of the node you are running on by looking in your prompt.
+      * Its name will be something like `kbargs15@student.aau.dk@nv-ai-fe<id>:~$`.
+    * Make save these three pieces of information: id, port, and token
+12. Detach (exit without kill) from the tmux terminal: press `ctrl+b` and then `d`
+13. Connect to the Jupyter Lab in your browser
+    * While being on the AAU network, connect to: `http://nv-ai-<id>.srv.aau.dk:<port>/lab?token=<token>`
+14. Choose the correct kernel for your notebooks, i.e. the `jkbc` kernel that we created earlier.
