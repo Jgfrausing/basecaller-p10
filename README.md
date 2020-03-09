@@ -94,7 +94,7 @@ conda activate jkbc
 ```
 
 ## Walkthrough: Initial run
-1. Be inside the AAU Network or run through the VPN.
+1. Connect to the AAU VPN. 
 2. SSH into the CLAAUDIA frontend: `ssh <username>@ai-pilot.srv.aau.dk`
 3. Create the Singularity image (like a docker image): `srun singularity pull docker://nvcr.io/nvidia/pytorch:20.02-py3`
 4. Create the runuser directory (usage unknown): `mkdir runuser`
@@ -120,3 +120,20 @@ conda activate jkbc
 13. Connect to the Jupyter Lab in your browser
     * While being on the AAU network, connect to: `http://nv-ai-<id>.srv.aau.dk:<port>/lab?token=<token>`
 14. Choose the correct kernel for your notebooks, i.e. the `jkbc` kernel that we created earlier.
+
+
+## Walkthrough: Subsequent runs
+1. Connect to the AAU VPN.
+2. SSH into the CLAAUDIA frontend: `ssh <username>@ai-pilot.srv.aau.dk`
+3. Open a tmux terminal by either creating a new session or attaching to an
+   existing one:
+    * Create a new session called "jupyter": `tmux new -s jupyter`
+    * Attach a terminal to an existing session called "jupyter": `tmux attach -t
+     jupyter`
+4. Run Jupyter Lab: `jupyter lab --port=8860 --ip=0.0.0.0`
+    * See step *11.* in the *Initial run* walthrough for how to find id, port
+    and token.
+5. Detach (exit without kill) from the tmux terminal: press `ctrl+b` and then `d`
+6. Connect to the Jupyter Lab in your browser with values from step 4.:
+   `http://nv-ai-<id>.srv.aau.dk:<port>/lab?token=<token>`
+7. Remember to choose the correct *kernel* for your notebooks (jkbc)
