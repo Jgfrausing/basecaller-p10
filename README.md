@@ -130,10 +130,11 @@ conda activate jkbc
     * Create a new session called "jupyter": `tmux new -s jupyter`
     * Attach a terminal to an existing session called "jupyter": `tmux attach -t
      jupyter`
-4. Run Jupyter Lab: `jupyter lab --port=8860 --ip=0.0.0.0`
+4. Run a shell in the container: `srun --gres=gpu:1 --pty singularity shell -B $HOME/runuser/:/run/user/$(id -u) --nv pytorch_20.02-py3.sif`
+5. Run Jupyter Lab: `jupyter lab --port=8860 --ip=0.0.0.0`
     * See step *11.* in the *Initial run* walthrough for how to find id, port
     and token.
-5. Detach (exit without kill) from the tmux terminal: press `ctrl+b` and then `d`
-6. Connect to the Jupyter Lab in your browser with values from step 4.:
+6. Detach (exit without kill) from the tmux terminal: press `ctrl+b` and then `d`
+7. Connect to the Jupyter Lab in your browser with values from step 5.:
    `http://nv-ai-<id>.srv.aau.dk:<port>/lab?token=<token>`
-7. Remember to choose the correct *kernel* for your notebooks (jkbc)
+8. Remember to choose the correct *kernel* for your notebooks (jkbc)
