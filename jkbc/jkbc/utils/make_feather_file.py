@@ -38,7 +38,7 @@ def _get_range(collection: prep.SignalCollection, ran: range, label_len: int, pa
         y = _y if y is None else np.concatenate((y, _y))
     
     # Adding padding
-    y_padded = prep.add_label_padding(labels = y, fixed_label_len = label_len, padding_id = padding_id)
+    y_padded = prep.add_label_padding(labels = y, fixed_label_len = label_len, padding_val = padding_id)
     
     return (x, y_padded)
 
