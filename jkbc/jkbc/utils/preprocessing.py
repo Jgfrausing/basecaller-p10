@@ -31,7 +31,7 @@ class ReadObject:
         self.reference = reference
 
 
-def convert_to_databunch(data: t.Tuple[np.ndarray, np.ndarray], split: float, device: torch.device = torch.device("cpu"), window_size: int=300) -> t.Tuple[t.TensorDataset, t.TensorDataset]:
+def convert_to_databunch(data: t.Tuple[np.ndarray, np.ndarray], split: float, window_size: int=300) -> t.Tuple[t.TensorDataset, t.TensorDataset]:
     """
     Converts a data object into test/validate TensorDatasets
     
@@ -43,32 +43,33 @@ def convert_to_databunch(data: t.Tuple[np.ndarray, np.ndarray], split: float, de
     x, y = data
     
     # Turn it into tensors
-    x_train = torch.tensor(x.reshape(x.shape[0], x.shape[1], 1), dtype = torch.float, device = device)
-    y_train = torch.tensor(y, dtype = torch.long, device = device)
+    x_train = torch.tensor(x.reshape(x.shape[0], 1, x.shape[1]), dtype = torch.float)
+    y_train = torch.tensor(y, dtype = torch.long)
         
     # Get split
     split_train = int(len(x_train)*split)
     split_valid = split_train-window_size
 
     # Split into test/valid sets
-    x_train_t = x_train[:-split_train]
-    y_train_t = y_train[:-split_train]
-    x_valid_t = x_train[-split_valid:]
-    y_valid_t = y_train[-split_valid:]
+    x_train_t = x_train[:split_train]
+    y_train_t = y_train[:split_train]
+    x_valid_t = x_train[split_valid:]
+    y_valid_t = y_train[split_valid:]
     
     # Create TensorDataset
     ds_train = t.TensorDataset(x_train_t, y_train_t)
     ds_valid = t.TensorDataset(x_valid_t, y_valid_t)
+        
     
     return ds_train, ds_valid
-    
-def get_y_lengths(y_pred_len:int, max_y_len:int, batch_size=int) -> t.Tuple[np.ndarray, np.ndarray]:
-    prediction_lengths = torch.full(size=(batch_size,), fill_value=y_pred_len, dtype=torch.long)
-    label_lengths = torch.full(size=(batch_size,), fill_value=max_y_len, dtype=torch.long)
+
+def get_y_lengths(y_pred_len:int, max_y_len:int, batch_size:int, device: torch.device) -> t.Tuple[np.ndarray, np.ndarray]:
+    prediction_lengths = torch.full(size=(batch_size,), fill_value=y_pred_len, dtype=torch.long, device=device)
+    label_lengths = torch.full(size=(batch_size,), fill_value=max_y_len, dtype=torch.long, device=device)
     
     return prediction_lengths, label_lengths
-    
-    
+
+
 # TODO: Implement missing Generator functions
 class SignalCollection(abc.Sequence):
     """
@@ -109,7 +110,7 @@ class SignalCollection(abc.Sequence):
         last_start_signal = ref_to_signal[-1] - self.window_size
 
         for window_signal_start in range(ref_to_signal[0], last_start_signal, self.stride):
-
+            
             # Get a window of the signal
             window_signal_end = window_signal_start + self.window_size
             window_signal = signal[window_signal_start:window_signal_end]
@@ -129,11 +130,11 @@ class SignalCollection(abc.Sequence):
                     labels.append(reference[index_base])
 
             # Discard windows with very few corresponding labels
-            if len(labels) < self.min_labels_per_window: break
+            if len(labels) < self.min_labels_per_window: continue
 
             x.append(window_signal)
             y.append(labels)
-        
+            
         return ReadObject(x, y, reference)
 
     def __iter__(self):
@@ -176,3 +177,9 @@ def _normalize(dac, dmin: float = 0, dmax: float = 850):
 def _standardize(dac, mean: float = 395.27, std:float = 80, dmin:float = 0, dmax: float = 850):
     """Standardize data based on"""
     return list((np.clip(dac, dmin, dmax) - mean) / std)
+
+
+def _add_get_state_method(target):
+    def get_state(target):
+        return{'a':'2'}
+    target.method = types.MethodType(get_state,target)

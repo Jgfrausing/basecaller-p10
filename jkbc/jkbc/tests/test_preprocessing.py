@@ -12,3 +12,12 @@ def test_add_label_padding_simple():
 
   # Assert
   np.testing.assert_array_equal(result, [[1, 2, 3, 4, 4], [2, 3, 4, 4, 4]])
+
+
+def test_succesfull_read():
+    elm = prep.SignalCollection("../mapped_umi16to9.hdf5")[264]
+    assert len(elm.x) > 0
+    assert len(elm.y) > 0
+    assert len(elm.reference) > 0
+
+

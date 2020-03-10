@@ -8,6 +8,8 @@ from fast_ctc_decode import beam_search
 import jkbc.utils.chiron.assembly as chiron
 import jkbc.types as t
 
+ALPHABET = {0:'A', 1:'C', 2:'G', 3:'T', 4:'-'}
+
 
 class Rates:
     """A 'struct' containing the different types of rates (deletion, insertion, mismatch, identity, error)"""
@@ -42,7 +44,7 @@ def calc_sequence_error_metrics(actual: str, predicted: str) -> Rates:
     return Rates(rate_deletion, rate_insertion, rate_mismatch, rate_identity, rate_error)
 
 
-def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int, str]) -> str:
+def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int, str] = ALPHABET) -> str:
     """Assemble a list of reads into a string
 
     Args:
@@ -73,7 +75,7 @@ def convert_idx_to_base_sequence(lst: List[int], alphabet: str) -> str:
     return __concat_str([alphabet[x] for x in lst])
 
 
-def decode(predictions: t.Tensor3D, alphabet: List[str], beam_size: int = 5, threshold: float = 0.1) -> List[str]:
+def decode(predictions: t.Tensor3D, alphabet: List[str] = list(ALPHABET.values()), beam_size: int = 1, threshold: float = 0.1) -> List[str]:
     """Decode model posteriors to sequence.
     
     Args:
@@ -87,7 +89,7 @@ def decode(predictions: t.Tensor3D, alphabet: List[str], beam_size: int = 5, thr
     alphabet_str: str = __concat_str(alphabet)
 
     # apply beam search on each window
-    decoded: List[str] = [beam_search(window.astype(np.float32), alphabet_str, beam_size, threshold)
+    decoded: List[str] = [beam_search(window.astype(np.float32), alphabet_str, beam_size, threshold)[0]
                           for window in predictions]
 
     return [__remove_duplicates_and_blanks(seq) for seq in decoded]
