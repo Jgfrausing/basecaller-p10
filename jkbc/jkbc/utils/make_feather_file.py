@@ -9,8 +9,8 @@ import jkbc.types as t
 
 
 # DEFAULT PARAMETERS
-FIX_LABEL_LEN  = 60  # Needed to avoid issues with jacked arrays
-BLANK_ID       = 4
+FIX_LABEL_LEN  = 70  # Needed to avoid issues with jacked arrays
+BLANK_ID       = prep.BLANK_ID
 FOLDERPATH     = 'data/feather-files/'
 
 def make_file(data_path: t.PathLike, folder_path: t.PathLike, ran: range, label_len: int, padding_id: int) -> None:
@@ -25,6 +25,7 @@ def make_file(data_path: t.PathLike, folder_path: t.PathLike, ran: range, label_
 
 
 def _get_range(collection: prep.SignalCollection, ran: range, label_len: int, padding_id: int)-> t.Tuple[np.ndarray, np.ndarray]:
+    assert len(collection) > ran.stop, "Range is out of bounds"
     x = None
     y = None
     for i in ran:

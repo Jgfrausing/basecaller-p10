@@ -1,5 +1,6 @@
 import collections.abc as abc
 import functools as ft
+import warnings
 
 import h5py as h5py
 import numpy as np
@@ -10,7 +11,7 @@ import jkbc.types as t
 import jkbc.utils.files as bc_files
 import jkbc.utils.postprocessing as pop
 
-BLANK_ID = 4
+BLANK_ID = 0
 
 
 class ReadObject:
@@ -107,7 +108,7 @@ class SignalCollection(abc.Sequence):
         dac, ref_to_signal, reference = bc_files.get_read_info_from_file(
             self.filename, read_id)
         signal = _standardize(dac)
-
+        
         num_of_bases = len(reference)
         index_base_start = 0
         last_start_signal = ref_to_signal[-1] - self.window_size
@@ -166,10 +167,16 @@ def add_label_padding(labels: t.Tensor2D, fixed_label_len: int, padding_val: int
     """Pads each label with padding_val until it reaches the fixed_label_length
 
     Example:
-        add_label_padding([[1, 2, 3], [2, 3]], fixed_label_len=5, padding_val=4)
-        => [[1, 2, 3, 4, 4], [2, 3, 4, 4, 4]]    
+        add_label_padding([[1, 2, 3], [2, 3]], fixed_label_len=5, padding_val=0)
+        => [[1, 2, 3, 0, 0], [2, 3, 0, 0, 0]]    
+        
+    Attention:
+        will cap label lengths exceding fixed_label_len
     """
-    return np.array([l + [padding_val] * (fixed_label_len - len(l)) for l in labels], dtype='float32')
+    for length in [len(l) for l in labels if len(l) > fixed_label_len]:
+        warnings.warn(f"Capping label length of {length} down to size {fixed_label_len}.")
+    capped_labels = [l[:fixed_label_len] for l in labels]
+    return np.array([l + [padding_val] * (fixed_label_len - len(l)) for l in capped_labels], dtype='float32')
 
 
 def _normalize(dac, dmin: float = 0, dmax: float = 850):

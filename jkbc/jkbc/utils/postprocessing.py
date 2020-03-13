@@ -8,7 +8,7 @@ from fast_ctc_decode import beam_search
 import jkbc.utils.chiron.assembly as chiron
 import jkbc.types as t
 
-ALPHABET = {0:'A', 1:'C', 2:'G', 3:'T', 4:'-'}
+ALPHABET = {0:'-', 1:'A', 2:'C', 3:'G', 4:'T'}
 
 
 class Rates:
@@ -56,7 +56,6 @@ def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int
     Returns:
         a fully assembled string
     """
-
     jump_step_ratio: float = stride / window_size
 
     assembled_with_probabilities: List[List[float]] = chiron.simple_assembly(
@@ -68,17 +67,18 @@ def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int
     return assembled
 
 
-def convert_idx_to_base_sequence(lst: List[int], alphabet: str) -> str:
+def convert_idx_to_base_sequence(lst: List[int], alphabet: str = list(ALPHABET.values()), has_blank = False) -> str:
     """Converts a list of base indexes into a str given an alphabet, e.g. [0, 1, 3] -> 'ACT'"""
 
     assert max(lst) < len(
         alphabet), "List contains indexes larger than alphabet size - 1."
     assert min(lst) >= 0, "List contains negative indexes."
 
-    return __concat_str([alphabet[x] for x in lst])
+    shift = 0 if has_blank else 1
+    return __concat_str([alphabet[x+shift] for x in lst])
 
 
-def decode(predictions: t.Tensor3D, alphabet: List[str] = list(ALPHABET.values()), beam_size: int = 1, threshold: float = 0.1) -> List[str]:
+def decode(predictions: t.Tensor3D, alphabet: List[str] = list(ALPHABET.values()), beam_size: int = 25, threshold: float = 0.1) -> List[str]:
     """Decode model posteriors to sequence.
 
     Args:
@@ -94,8 +94,8 @@ def decode(predictions: t.Tensor3D, alphabet: List[str] = list(ALPHABET.values()
     # apply beam search on each window
     decoded: List[str] = [beam_search(window.astype(np.float32), alphabet_str, beam_size, threshold)[0]
                           for window in predictions]
-
-    return [__remove_duplicates_and_blanks(seq) for seq in decoded]
+        
+    return decoded
 
 
 # HELPERS
