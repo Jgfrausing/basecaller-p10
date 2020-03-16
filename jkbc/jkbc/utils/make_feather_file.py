@@ -13,10 +13,10 @@ FIX_LABEL_LEN  = 70  # Needed to avoid issues with jacked arrays
 BLANK_ID       = prep.BLANK_ID
 FOLDERPATH     = 'data/feather-files/'
 
-def make_file(data_path: t.PathLike, folder_path: t.PathLike, ran: range, label_len: int, padding_id: int) -> None:
+def make_file(data_path: t.PathLike, folder_path: t.PathLike, ran: range, label_len: int) -> None:
     # Get data range
     collection = prep.SignalCollection(data_path)
-    data = _get_range(collection, ran, label_len, padding_id);
+    data = _get_range(collection, ran, label_len);
 
     # Write to file
     f.write_data_to_feather_file(folder_path, data)
@@ -24,7 +24,7 @@ def make_file(data_path: t.PathLike, folder_path: t.PathLike, ran: range, label_
     return data
 
 
-def _get_range(collection: prep.SignalCollection, ran: range, label_len: int, padding_id: int)-> t.Tuple[np.ndarray, np.ndarray]:
+def _get_range(collection: prep.SignalCollection, ran: range, label_len: int)-> t.Tuple[np.ndarray, np.ndarray]:
     assert len(collection) > ran.stop, "Range is out of bounds"
     x = None
     y = None
@@ -39,7 +39,7 @@ def _get_range(collection: prep.SignalCollection, ran: range, label_len: int, pa
         y = _y if y is None else np.concatenate((y, _y))
     
     # Adding padding
-    y_padded = prep.add_label_padding(labels = y, fixed_label_len = label_len, padding_val = padding_id)
+    y_padded = prep.add_label_padding(labels = y, fixed_label_len = label_len)
     
     return (x, y_padded)
 
@@ -67,7 +67,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--f", help="range from (default 0)", default=0)
 parser.add_argument("--t", help="range to (default 5)", default=5)
 parser.add_argument("--ll", help=f"fixed label length (default {FIX_LABEL_LEN})", default=FIX_LABEL_LEN)
-parser.add_argument("--b", help=f"blank id (default {BLANK_ID})", default=BLANK_ID)
 parser.add_argument("--o", help=f"output path (default '{FOLDERPATH}')", default=FOLDERPATH)
 parser.add_argument("-run_test", help="run validation test after file is saved", action="store_true")
 
@@ -81,7 +80,7 @@ folder_name = f'Range{args.f}-{args.t}-FixLabelLen{args.ll}'
 output_path = base_dir/folder_name
 
 print('Making feather files')
-data = make_file(args.data_path, output_path, range(int(args.f), int(args.t)), int(args.ll), int(args.b))
+data = make_file(args.data_path, output_path, range(int(args.f), int(args.t)), int(args.ll))
 print('Files created')
 
 if args.run_test:

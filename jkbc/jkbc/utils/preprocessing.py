@@ -131,7 +131,8 @@ class SignalCollection(abc.Sequence):
                     break
                 else:
                     # Base is in the window so we add it to labels
-                    labels.append(reference[index_base])
+                    # One is added to avoid As and BLANKs (index 0) clashing in CTC
+                    labels.append(reference[index_base]+1)
 
             # Discard windows with very few corresponding labels
             if len(labels) < self.min_labels_per_window: continue
@@ -163,12 +164,12 @@ class SignalCollection(abc.Sequence):
         return len(self.read_idx)
 
 
-def add_label_padding(labels: t.Tensor2D, fixed_label_len: int, padding_val: int = BLANK_ID) -> t.Tensor2D:
+def add_label_padding(labels: t.Tensor2D, fixed_label_len: int) -> t.Tensor2D:
     """Pads each label with padding_val until it reaches the fixed_label_length
 
     Example:
-        add_label_padding([[1, 2, 3], [2, 3]], fixed_label_len=5, padding_val=0)
-        => [[1, 2, 3, 0, 0], [2, 3, 0, 0, 0]]    
+        add_label_padding([[1, 1, 2], [3, 4]], fixed_label_len=5, padding_val=0)
+        => [[2, 2, 3, 0, 0], [3, 4, 0, 0, 0]]    
         
     Attention:
         will cap label lengths exceding fixed_label_len
@@ -176,7 +177,8 @@ def add_label_padding(labels: t.Tensor2D, fixed_label_len: int, padding_val: int
     for length in [len(l) for l in labels if len(l) > fixed_label_len]:
         warnings.warn(f"Capping label length of {length} down to size {fixed_label_len}.")
     capped_labels = [l[:fixed_label_len] for l in labels]
-    return np.array([l + [padding_val] * (fixed_label_len - len(l)) for l in capped_labels], dtype='float32')
+    
+    return np.array([l + [BLANK_ID] * (fixed_label_len - len(l)) for l in capped_labels], dtype='float32')
 
 
 def _normalize(dac, dmin: float = 0, dmax: float = 850):
