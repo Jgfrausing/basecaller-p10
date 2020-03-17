@@ -32,7 +32,7 @@ class ReadObject:
         self.reference = reference
 
 
-def convert_to_datasets(data: t.Tuple[np.ndarray, np.ndarray], split: float, window_size: int=300) -> t.Tuple[t.TensorDataset, t.TensorDataset]:
+def convert_to_datasets(data: t.Tuple[np.ndarray, np.ndarray], split: float) -> t.Tuple[t.TensorDataset, t.TensorDataset]:
     """
     Converts a data object into test/validate TensorDatasets
 
@@ -42,7 +42,8 @@ def convert_to_datasets(data: t.Tuple[np.ndarray, np.ndarray], split: float, win
     """
     # Unpack
     x, y = data
-
+    window_size = x.shape[1]
+    
     # Turn it into tensors
     x_train = torch.tensor(x.reshape(x.shape[0], 1, x.shape[1]), dtype = torch.float)
     y_train = torch.tensor(y, dtype = torch.long)
