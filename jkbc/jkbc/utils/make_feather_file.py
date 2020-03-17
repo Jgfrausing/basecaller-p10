@@ -12,10 +12,11 @@ import jkbc.types as t
 FIX_LABEL_LEN  = 70  # Needed to avoid issues with jacked arrays
 BLANK_ID       = prep.BLANK_ID
 FOLDERPATH     = 'data/feather-files/'
+STRIDE         = 300 # We make stride same size as window to make more distinct training data
 
 def make_file(data_path: t.PathLike, folder_path: t.PathLike, ran: range, label_len: int) -> None:
     # Get data range
-    collection = prep.SignalCollection(data_path)
+    collection = prep.SignalCollection(data_path, stride=STRIDE)
     data = _get_range(collection, ran, label_len);
 
     # Write to file
