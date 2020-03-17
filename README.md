@@ -138,3 +138,11 @@ conda activate jkbc
 7. Connect to the Jupyter Lab in your browser with values from step 5.:
    `http://nv-ai-<id>.srv.aau.dk:<port>/lab?token=<token>`
 8. Remember to choose the correct *kernel* for your notebooks (jkbc)
+
+## tmux tips
+If you create multiple tmux sessions, by:
+* `tmux new -s session1` and `tmux new -s session2`
+And attach into one of them:
+* `tmux attach -t session1`
+Then you can switch between the sessions using:
+* `Ctrl` + `B` `(`
