@@ -76,8 +76,8 @@ def convert_idx_to_base_sequence(lst: List[int], alphabet: str = ALPHABET_VALUES
     assert max(lst) < len(
         alphabet), "List contains indexes larger than alphabet size - 1."
     assert min(lst) >= 0, "List contains negative indexes."
-
-    return __concat_str([alphabet[x] for x in lst])
+    
+    return __remove_blanks(__concat_str([alphabet[x] for x in lst]))
 
 
 def decode(predictions: t.Tensor3D, alphabet: str = ALPHABET_STR, beam_size: int = 25, threshold: float = 0.1, predictions_in_log: bool = True) -> List[str]:
