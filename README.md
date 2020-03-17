@@ -142,7 +142,9 @@ conda activate jkbc
 ## tmux tips
 If you create multiple tmux sessions, by:
 * `tmux new -s session1` and `tmux new -s session2`
+
 And attach into one of them:
 * `tmux attach -t session1`
+
 Then you can switch between the sessions using:
 * `Ctrl` + `B` `(`
