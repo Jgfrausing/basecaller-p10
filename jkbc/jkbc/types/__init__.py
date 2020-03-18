@@ -1,4 +1,4 @@
-from typing import NewType, Union, Tuple
+from typing import *
 import pathlib as pl
 
 import numpy as np
