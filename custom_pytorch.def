@@ -1,0 +1,21 @@
+BootStrap: docker
+From: nvcr.io/nvidia/pytorch:20.02-py3
+
+%post
+
+    echo ">>>>>>>>>> BEGIN %POST SECTION"
+
+    echo ">>>>>>>>>> APT-GET UPDATE"
+    apt-get -y update
+
+    echo ">>>>>>>>>> ZSH"
+    apt-get -y install zsh
+    # Make zsh the default terminal
+    chsh -s $(which zsh)
+    
+    echo ">>>>>>>>>> CONDA"
+    # Update all conda
+    /opt/conda/bin/conda update -y -n base --all
+    /opt/conda/bin/conda install --yes -c conda-forge nodejs jupyterlab
+
+    echo ">>>>>>>>>> ALL DONE WITH %POST"
