@@ -143,6 +143,25 @@ class SignalCollection(abc.Sequence):
             
         return ReadObject(x, y, reference)
 
+    def get_range(self, ran: range, label_len: int)-> t.Tuple[np.ndarray, np.ndarray, list]:
+        x = None
+        y = None
+        for i in ran:
+            # Getting data
+            data = self[i]
+            data_fields = np.array(data.x), np.array(data.y), data.reference
+            _x, _y, _ = data_fields # we don't use the full reference while training
+
+            # Concating into a single collection
+            x = _x if x is None else np.concatenate((x, _x))
+            y = _y if y is None else np.concatenate((y, _y))
+    
+        # Adding padding
+        y_lengths = [len(lst) for lst in y]
+        y_padded = add_label_padding(labels = y, fixed_label_len = label_len)
+
+        return (x, y_padded, y_lengths)
+    
     def __iter__(self):
         """Initiates the iterator"""
         self.pos = 0
