@@ -1,5 +1,6 @@
 import collections.abc as abc
 import functools as ft
+import warnings
 
 import h5py as h5py
 import numpy as np
@@ -10,7 +11,7 @@ import jkbc.types as t
 import jkbc.utils.files as bc_files
 import jkbc.utils.postprocessing as pop
 
-BLANK_ID = 4
+BLANK_ID = 0
 
 
 class ReadObject:
@@ -30,8 +31,34 @@ class ReadObject:
         self.y = y
         self.reference = reference
 
+class SizedTensorDataset(t.TensorDataset):
+    r"""Dataset wrapping tensors.
 
-def convert_to_datasets(data: t.Tuple[np.ndarray, np.ndarray], split: float, window_size: int=300) -> t.Tuple[t.TensorDataset, t.TensorDataset]:
+    TensorDataset that returns the tuple (x, (y,y_lengths)).
+    CTC_loss must take 3 parameters.
+
+    Arguments:
+        *tensors (Tensor): tensors that have the same size of the first dimension.
+    """
+
+    def __init__(self, *tensors):
+        assert (len(tensors) == 3)
+        assert all(tensors[0].size(0) == tensor.size(0) for tensor in tensors)
+        self.tensors = tensors
+
+    def __getitem__(self, index):
+        x = self.tensors[0][index]
+        y = self.tensors[1][index]
+        y_lengths = self.tensors[2][index]
+        res = (x, (y, y_lengths))
+
+        return res
+
+    def __len__(self):
+        return self.tensors[0].size(0)
+
+
+def convert_to_datasets(data: t.Tuple[np.ndarray, np.ndarray, list], split: float) -> t.Tuple[t.TensorDataset, t.TensorDataset]:
     """
     Converts a data object into test/validate TensorDatasets
 
@@ -40,36 +67,39 @@ def convert_to_datasets(data: t.Tuple[np.ndarray, np.ndarray], split: float, win
         data = DataBunch.create(train, valid, bs=64)
     """
     # Unpack
-    x, y = data
-
-    # Turn it into tensors
-    x_train = torch.tensor(x.reshape(x.shape[0], 1, x.shape[1]), dtype = torch.float)
-    y_train = torch.tensor(y, dtype = torch.long)
+    x, y, y_lengths = data
+    y_lengths_count = len(y_lengths)
+    window_size = x.shape[1]
         
+    # Turn it into tensors
+    x = torch.as_tensor(x.reshape(x.shape[0], 1, x.shape[1]), dtype = torch.float)
+    y = torch.as_tensor(y, dtype = torch.long)
+    y_lengths = torch.as_tensor(y_lengths, dtype = torch.long).view(y_lengths_count, 1)
+    
     # Get split
-    split_train = int(len(x_train)*split)
+    split_train = int(len(x)*split)
     split_valid = split_train-window_size
 
     # Split into test/valid sets
-    x_train_t = x_train[:split_train]
-    y_train_t = y_train[:split_train]
-    x_valid_t = x_train[split_valid:]
-    y_valid_t = y_train[split_valid:]
+    x_train_t = x[:split_train]
+    y_train_t = y[:split_train]
+    y_train_lengths = y_lengths[:split_train]
+    x_valid_t = x[split_valid:]
+    y_valid_t = y[split_valid:]
+    y_valid_lengths = y_lengths[split_valid:,:]
 
     # Create TensorDataset
-    ds_train = t.TensorDataset(x_train_t, y_train_t)
-    ds_valid = t.TensorDataset(x_valid_t, y_valid_t)
+    ds_train = SizedTensorDataset(x_train_t, y_train_t, y_train_lengths)
+    ds_valid = SizedTensorDataset(x_valid_t, y_valid_t, y_valid_lengths)
 
     return ds_train, ds_valid
 
 
-def get_y_lengths(y_pred_len: int, max_y_len: int, batch_size=int) -> t.Tuple[np.ndarray, np.ndarray]:
+def get_prediction_lengths(y_pred_len: int, batch_size=int) -> t.Tuple[np.ndarray, np.ndarray]:
     prediction_lengths = torch.full(
         size=(batch_size,), fill_value=y_pred_len, dtype=torch.long)
-    label_lengths = torch.full(
-        size=(batch_size,), fill_value=max_y_len, dtype=torch.long)
-
-    return prediction_lengths, label_lengths
+    
+    return prediction_lengths
 
 
 # TODO: Implement missing Generator functions
@@ -107,7 +137,7 @@ class SignalCollection(abc.Sequence):
         dac, ref_to_signal, reference = bc_files.get_read_info_from_file(
             self.filename, read_id)
         signal = _standardize(dac)
-
+        
         num_of_bases = len(reference)
         index_base_start = 0
         last_start_signal = ref_to_signal[-1] - self.window_size
@@ -130,7 +160,8 @@ class SignalCollection(abc.Sequence):
                     break
                 else:
                     # Base is in the window so we add it to labels
-                    labels.append(reference[index_base])
+                    # One is added to avoid As and BLANKs (index 0) clashing in CTC
+                    labels.append(reference[index_base]+1)
 
             # Discard windows with very few corresponding labels
             if len(labels) < self.min_labels_per_window: continue
@@ -140,6 +171,35 @@ class SignalCollection(abc.Sequence):
             
         return ReadObject(x, y, reference)
 
+    def get_range(self, ran: range, label_len: int)-> t.Tuple[np.ndarray, np.ndarray, list]:
+        x = None
+        y = None
+        for i in ran:
+            # Getting data
+            data = self[i]
+            data_fields = np.array(data.x), np.array(data.y), data.reference
+            _x, _y, _ = data_fields # we don't use the full reference while training
+
+            # Concating into a single collection
+            x = _x if x is None else np.concatenate((x, _x))
+            y = _y if y is None else np.concatenate((y, _y))
+    
+        # Adding padding
+        y_lengths = [len(lst) for lst in y]
+        y_padded = add_label_padding(labels = y, fixed_label_len = label_len)
+
+        return (x, y_padded, y_lengths)
+    
+    
+    def generator(self):
+        """Get the next piece of data.
+        Returns:
+            training_dict, (test_signal, test_labels)
+        """
+
+        for pos in range(len(self)):
+            yield self[pos]
+    '''
     def __iter__(self):
         """Initiates the iterator"""
         self.pos = 0
@@ -149,27 +209,27 @@ class SignalCollection(abc.Sequence):
         """Receives next piece of data from the file."""
         return self.generator()
 
-    def generator(self):
-        """Get the next piece of data.
-        Returns:
-            training_dict, (test_signal, test_labels)
-        """
-
-        for pos in range(len(self)):
-            yield self[pos]
+    '''
 
     def __len__(self):
         return len(self.read_idx)
 
 
-def add_label_padding(labels: t.Tensor2D, fixed_label_len: int, padding_val: int = BLANK_ID) -> t.Tensor2D:
+def add_label_padding(labels: t.Tensor2D, fixed_label_len: int) -> t.Tensor2D:
     """Pads each label with padding_val until it reaches the fixed_label_length
 
     Example:
-        add_label_padding([[1, 2, 3], [2, 3]], fixed_label_len=5, padding_val=4)
-        => [[1, 2, 3, 4, 4], [2, 3, 4, 4, 4]]    
+        add_label_padding([[1, 1, 2], [3, 4]], fixed_label_len=5, padding_val=0)
+        => [[2, 2, 3, 0, 0], [3, 4, 0, 0, 0]]    
+        
+    Attention:
+        will cap label lengths exceding fixed_label_len
     """
-    return np.array([l + [padding_val] * (fixed_label_len - len(l)) for l in labels], dtype='float32')
+    for length in [len(l) for l in labels if len(l) > fixed_label_len]:
+        warnings.warn(f"Capping label length of {length} down to size {fixed_label_len}.")
+    capped_labels = [l[:fixed_label_len] for l in labels]
+    
+    return np.array([l + [BLANK_ID] * (fixed_label_len - len(l)) for l in capped_labels], dtype='float32')
 
 
 def _normalize(dac, dmin: float = 0, dmax: float = 850):
@@ -180,9 +240,3 @@ def _normalize(dac, dmin: float = 0, dmax: float = 850):
 def _standardize(dac, mean: float = 395.27, std: float = 80, dmin: float = 0, dmax: float = 850):
     """Standardize data based on"""
     return list((np.clip(dac, dmin, dmax) - mean) / std)
-
-
-def _add_get_state_method(target):
-    def get_state(target):
-        return{'a':'2'}
-    target.method = types.MethodType(get_state,target)
