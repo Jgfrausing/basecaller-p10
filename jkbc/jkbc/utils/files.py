@@ -81,7 +81,7 @@ def get_read_info_from_open_file(hdf5_file: h5py.File, read_id: str) -> t.Tuple[
     return signal, ref_to_signal, reference
 
 
-def write_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray, np.ndarray]) -> None:
+def write_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray, np.ndarray, t.List[int]]) -> None:
     x, y, y_lengths = data
     __make_dir(folder_path)
 
@@ -93,7 +93,7 @@ def write_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray
                             os.path.join(folder_path, 'y_lengths'))
 
 
-def read_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, np.ndarray]:
+def read_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, np.ndarray, t.List[int]]:
     x = feather.read_dataframe(os.path.join(folder_path, 'x'))
     y = feather.read_dataframe(os.path.join(folder_path, 'y'))
     y_lengths = feather.read_dataframe(os.path.join(folder_path, 'y_lengths'))

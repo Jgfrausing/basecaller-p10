@@ -1,7 +1,7 @@
 from fastai.basics import *
 import jkbc.utils.preprocessing as prep
 
-def get_ctc_loss_function(prediction_size, batch_size, alphabet_size):
+def ctc_loss(prediction_size: int, batch_size: int, alphabet_size:int) -> functools.partial:
     return partial(__ctc_loss, prep.get_prediction_lengths(prediction_size, batch_size), alphabet_size)
 
 def __ctc_loss(y_pred_lengths, alphabet_size, y_pred_b: torch.Tensor, y_b: torch.Tensor, y_lengths) -> float:

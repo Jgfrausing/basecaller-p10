@@ -1,8 +1,8 @@
-from typing import NewType, Union, Tuple
+from typing import NewType, Union, Tuple, List
 import pathlib as pl
 
 import numpy as np
-from torch.utils.data import TensorDataset
+from torch.utils.data import TensorDataset, DataLoader
 
 PathLike = NewType("PathLike", Union[pl.Path, str])
 
