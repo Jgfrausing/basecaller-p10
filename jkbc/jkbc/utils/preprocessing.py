@@ -58,7 +58,7 @@ class SizedTensorDataset(t.TensorDataset):
         return self.tensors[0].size(0)
 
 
-def convert_to_datasets(data: t.Tuple[np.ndarray, np.ndarray, list], split: float) -> t.Tuple[t.TensorDataset, t.TensorDataset]:
+def convert_to_dataloaders(data: t.Tuple[np.ndarray, np.ndarray, list], split: float, batch_size: int, drop_last: bool = False) -> t.Tuple[t.DataLoader, t.DataLoader]:
     """
     Converts a data object into test/validate TensorDatasets
 
@@ -89,10 +89,14 @@ def convert_to_datasets(data: t.Tuple[np.ndarray, np.ndarray, list], split: floa
     y_valid_lengths = y_lengths[split_valid:,:]
 
     # Create TensorDataset
-    ds_train = SizedTensorDataset(x_train_t, y_train_t, y_train_lengths)
-    ds_valid = SizedTensorDataset(x_valid_t, y_valid_t, y_valid_lengths)
+    train_ds = SizedTensorDataset(x_train_t, y_train_t, y_train_lengths)
+    valid_ds = SizedTensorDataset(x_valid_t, y_valid_t, y_valid_lengths)
+    
+    # Create DataLoader
+    train_dl = t.DataLoader(train_ds, batch_size=batch_size, drop_last=drop_last)
+    valid_dl = t.DataLoader(valid_ds, batch_size=batch_size, drop_last=drop_last)
 
-    return ds_train, ds_valid
+    return train_dl, valid_dl
 
 
 def get_prediction_lengths(y_pred_len: int, batch_size=int) -> t.Tuple[np.ndarray, np.ndarray]:
@@ -114,11 +118,12 @@ class SignalCollection(abc.Sequence):
         stride: how much the moving window moves at a time
     """
 
-    def __init__(self, filename: t.PathLike, min_labels_per_window: int = 5,
+    def __init__(self, filename: t.PathLike, max_labels_per_window: int = 70, min_labels_per_window: int = 5,
                  window_size: int = 300, stride: int = 5):
 
         self.filename = filename
         self.min_labels_per_window = min_labels_per_window
+        self.max_labels_per_window = max_labels_per_window
         self.pos = 0
         self.window_size = window_size
         self.stride = stride
@@ -165,7 +170,8 @@ class SignalCollection(abc.Sequence):
 
             # Discard windows with very few corresponding labels
             if len(labels) < self.min_labels_per_window: continue
-
+            # And windows exeeding the maximum
+            elif len(labels) > self.max_labels_per_window: continue
             x.append(window_signal)
             y.append(labels)
             
@@ -179,7 +185,7 @@ class SignalCollection(abc.Sequence):
             data = self[i]
             data_fields = np.array(data.x), np.array(data.y), data.reference
             _x, _y, _ = data_fields # we don't use the full reference while training
-
+            
             # Concating into a single collection
             x = _x if x is None else np.concatenate((x, _x))
             y = _y if y is None else np.concatenate((y, _y))
@@ -216,7 +222,7 @@ class SignalCollection(abc.Sequence):
 
 
 def add_label_padding(labels: t.Tensor2D, fixed_label_len: int) -> t.Tensor2D:
-    """Pads each label with padding_val until it reaches the fixed_label_length
+    """Pads each label with padding_val
 
     Example:
         add_label_padding([[1, 1, 2], [3, 4]], fixed_label_len=5, padding_val=0)
@@ -225,11 +231,8 @@ def add_label_padding(labels: t.Tensor2D, fixed_label_len: int) -> t.Tensor2D:
     Attention:
         will cap label lengths exceding fixed_label_len
     """
-    for length in [len(l) for l in labels if len(l) > fixed_label_len]:
-        warnings.warn(f"Capping label length of {length} down to size {fixed_label_len}.")
-    capped_labels = [l[:fixed_label_len] for l in labels]
     
-    return np.array([l + [BLANK_ID] * (fixed_label_len - len(l)) for l in capped_labels], dtype='float32')
+    return np.array([l + [BLANK_ID] * (fixed_label_len - len(l)) for l in fixed_label_len], dtype='float32')
 
 
 def _normalize(dac, dmin: float = 0, dmax: float = 850):

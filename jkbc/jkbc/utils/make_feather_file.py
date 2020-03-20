@@ -16,7 +16,7 @@ STRIDE         = 300 # We make stride same size as window to make more distinct 
 
 def make_file(data_path: t.PathLike, folder_path: t.PathLike, ran: range, label_len: int) -> None:
     # Get data range
-    collection = prep.SignalCollection(data_path, stride=STRIDE)
+    collection = prep.SignalCollection(data_path, max_labels_per_window=FIX_LABEL_LEN, stride=STRIDE)
     data = collection.get_range(ran, label_len);
 
     # Write to file
