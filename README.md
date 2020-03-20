@@ -85,7 +85,7 @@ On a computer **in the AAU network/on the VPN**:
     * Copy the token that is printed, and open a the Lab as described in the *accessing jupyter lab section* above.
     * Detach (exit with killing) the tmux terminal by pressing `ctrl+b` and then pressing `d`
 
-  
+
 **Adding a conda environment as a kernel in Jupyter Lab:**
   * Assuming the conda environment you want to add is called `jkbc`, use the following commands:
 ```
@@ -148,3 +148,53 @@ And attach into one of them:
 
 Then you can switch between the sessions using:
 * `Ctrl` + `B` `(`
+=======
+
+## Make and load training data
+We created a script that reads hdf5 files, and saves training data into feather files. This greatly improves the speed that data is loaded into memory, and skips a lot of the preprocessing. 
+### Make
+1. Activate conda environment: `conda activate jkbc`
+2. Run `python [path to make_feather_file.py] [path to data] [OPTIONS]`
+    * By default the script will create a small example and save it to data/feather-files/
+    * The following options can be applied:
+        - `--f [number]` and `--t [number]`: The range of signals to be used (default 0 and 5)
+        - `--ll`: The fixed size of the labels (default 70)
+        - `--o`: Override the path to save the files
+        - `-run_test`: Runs a test that ensures that saved data equals loaded data
+    * To avoid defining where the save the files, run the script from the root of this project
+        - `python jkbc/jkbc/utils/make_feather_file.py [path to data] [OPTIONS]`
+3. The script creates a folder named `Range0-50-FixLabelLen70`
+    * Where:
+        - 0 corresponds to the `--f` parameter
+        - 50 corresponds to the `--t` parameter
+        - 70 corresponds to the `--ll` parameter
+    * Within the folder lies the files:
+        - x (input data)
+        - y (labels)
+
+### Load
+To load the data do the following:
+1. Import needed dependensies
+    ```python
+    from fastai.basics import *
+
+    import jkbc.utils.preprocessing as prep
+    import jkbc.utils.files as f
+    ```
+2. Setup path to folder
+    ```python
+    base_dir = "data/feather-files/"
+    path_data = Path(base_dir)
+    data_set_name = 'Range0-5-FixLabelLen70'
+    feather_folder = path_data/data_set_name
+    ```
+3. Read data and create databunch
+    ```python
+    # Read data from feather
+    data = f.read_data_from_feather_file(feather_folder)
+    x, y_train = data
+
+    # Convert to databunch
+    train, valid = prep.convert_to_datasets(data, split=.8)
+    databunch = DataBunch.create(train, valid, bs=BS)
+    ```
