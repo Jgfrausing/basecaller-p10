@@ -99,7 +99,7 @@ def convert_to_dataloaders(data: t.Tuple[np.ndarray, np.ndarray, list], split: f
     return train_dl, valid_dl
 
 
-def get_prediction_lengths(y_pred_len: int, batch_size=int) -> t.Tuple[np.ndarray, np.ndarray]:
+def get_prediction_lengths(y_pred_len: int, batch_size: int) -> t.Tuple[np.ndarray, np.ndarray]:
     prediction_lengths = torch.full(
         size=(batch_size,), fill_value=y_pred_len, dtype=torch.long)
     
@@ -232,7 +232,7 @@ def add_label_padding(labels: t.Tensor2D, fixed_label_len: int) -> t.Tensor2D:
         will cap label lengths exceding fixed_label_len
     """
     
-    return np.array([l + [BLANK_ID] * (fixed_label_len - len(l)) for l in fixed_label_len], dtype='float32')
+    return np.array([l + [BLANK_ID] * (fixed_label_len - len(l)) for l in labels], dtype='float32')
 
 
 def _normalize(dac, dmin: float = 0, dmax: float = 850):

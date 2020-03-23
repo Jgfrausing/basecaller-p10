@@ -92,7 +92,8 @@ def decode(predictions: t.Tensor3D, alphabet: str = ALPHABET_STR, beam_size: int
     Returns:
         a decoded string
     """
-
+    assert beam_size > 0 and type(beam_size) == int, 'Beam size must be a non-zero positive integer'
+    
     if predictions_in_log:
         predictions = convert_logsoftmax_to_softmax(predictions)
     # apply beam search on each window

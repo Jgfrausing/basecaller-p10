@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-from typing import NewType, Union, Tuple, List
-=======
 from typing import *
 import pathlib as pl
 
