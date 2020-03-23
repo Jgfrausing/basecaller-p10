@@ -232,7 +232,7 @@ def add_label_padding(labels: t.Tensor2D, fixed_label_len: int) -> t.Tensor2D:
         will cap label lengths exceding fixed_label_len
     """
     
-    return np.array([l + [BLANK_ID] * (fixed_label_len - len(l)) for l in fixed_label_len], dtype='float32')
+    return np.array([l + [BLANK_ID] * (fixed_label_len - len(l)) for l in labels], dtype='float32')
 
 
 def _normalize(dac, dmin: float = 0, dmax: float = 850):
