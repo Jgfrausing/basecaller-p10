@@ -45,28 +45,31 @@ def _equal_sum(a, b):
     assert sum([sum(x) for x in a]) == sum([sum(x) for x in b])
 
 
-parser = argparse.ArgumentParser()
+def main() -> None:
+    parser = argparse.ArgumentParser()
 
-parser.add_argument("--f", help="range from (default 0)", default=0)
-parser.add_argument("--t", help="range to (default 5)", default=5)
-parser.add_argument("--ll", help=f"fixed label length (default {FIX_LABEL_LEN})", default=FIX_LABEL_LEN)
-parser.add_argument("--o", help=f"output path (default '{FOLDERPATH}')", default=FOLDERPATH)
-parser.add_argument("-run_test", help="run validation test after file is saved", action="store_true")
+    parser.add_argument("--f", help="range from (default 0)", default=0)
+    parser.add_argument("--t", help="range to (default 5)", default=5)
+    parser.add_argument("--ll", help=f"fixed label length (default {FIX_LABEL_LEN})", default=FIX_LABEL_LEN)
+    parser.add_argument("--o", help=f"output path (default '{FOLDERPATH}')", default=FOLDERPATH)
+    parser.add_argument("-run_test", help="run validation test after file is saved", action="store_true")
 
-parser.add_argument("data_path", help="path to data file")
+    parser.add_argument("data_path", help="path to data file")
+    
+    args = parser.parse_args()
+    
+    base_dir = Path(args.o)
+    folder_name = f'Range{args.f}-{args.t}-FixLabelLen{args.ll}'
+    output_path = base_dir/folder_name
+    print('Making feather files')
+    data = make_file(args.data_path, output_path, range(int(args.f), int(args.t)), int(args.ll))
+    print('Files created')
 
-args = parser.parse_args()
+    if args.run_test:
+        print('Running test')
+        test_read_equal_write(data, output_path)
+        print('Test done')
 
-base_dir = Path(args.o)
-folder_name = f'Range{args.f}-{args.t}-FixLabelLen{args.ll}'
 
-output_path = base_dir/folder_name
-
-print('Making feather files')
-data = make_file(args.data_path, output_path, range(int(args.f), int(args.t)), int(args.ll))
-print('Files created')
-
-if args.run_test:
-    print('Running test')
-    test_read_equal_write(data, output_path)
-    print('Test done')
+if __name__ == '__main__':
+    main()
