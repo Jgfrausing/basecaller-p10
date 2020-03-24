@@ -83,8 +83,8 @@ The following practices should be adhered to:
     * This makes it easier to adjust for changes made in pre- or post-processing, if needed.
 * The models are saved and loaded using the name of the notebook.
     * Rename the notebook whenever changes are made and a new model is trained
-        * Run `git co -- model-nbk/<name-of-folder>/<name-of-old-notebook>.ipynb`
-        * and `git add model-nbk/<name-of-folder>/<name-of-new-notebook>.ipynb`
+        * Run `git co -- <name-of-old-notebook>.ipynb`
+        * and `git add <name-of-new-notebook>.ipynb`
         * this ensures that both versions of the model are saved and their traind weights can be loaded
 
 ## Make and load training data
