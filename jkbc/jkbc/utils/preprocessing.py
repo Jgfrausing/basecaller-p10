@@ -99,7 +99,7 @@ def convert_to_dataloaders(data: t.Tuple[np.ndarray, np.ndarray, list], split: f
     return train_dl, valid_dl
 
 
-def get_prediction_lengths(y_pred_len: int, batch_size=int) -> t.Tuple[np.ndarray, np.ndarray]:
+def get_prediction_lengths(y_pred_len: int, batch_size: int) -> t.Tuple[np.ndarray, np.ndarray]:
     prediction_lengths = torch.full(
         size=(batch_size,), fill_value=y_pred_len, dtype=torch.long)
     

@@ -9,6 +9,7 @@ from fast_ctc_decode import beam_search
 import jkbc.utils.chiron.assembly as chiron
 import jkbc.types as t
 
+BLANK_ID = 0
 ALPHABET = {0:'-', 1:'A', 2:'C', 3:'G', 4:'T'}
 ALPHABET_VALUES = list(ALPHABET.values())
 ALPHABET_STR = ''.join(ALPHABET_VALUES)
@@ -92,7 +93,8 @@ def decode(predictions: t.Tensor3D, alphabet: str = ALPHABET_STR, beam_size: int
     Returns:
         a decoded string
     """
-
+    assert beam_size > 0 and type(beam_size) == int, 'Beam size must be a non-zero positive integer'
+    
     if predictions_in_log:
         predictions = convert_logsoftmax_to_softmax(predictions)
     # apply beam search on each window
