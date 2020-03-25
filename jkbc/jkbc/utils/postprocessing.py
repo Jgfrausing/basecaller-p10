@@ -1,10 +1,12 @@
 import difflib
 from itertools import groupby
 import math
-from typing import List, Dict
+import re
+from collections import defaultdict
 
 import numpy as np
 from fast_ctc_decode import beam_search
+import parasail
 
 import jkbc.utils.chiron.assembly as chiron
 import jkbc.types as t
@@ -49,7 +51,26 @@ def calc_sequence_error_metrics(actual: str, predicted: str) -> Rates:
     return Rates(rate_deletion, rate_insertion, rate_mismatch, rate_identity, rate_error)
 
 
-def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int, str] = ALPHABET) -> str:
+def calc_accuracy(ref: str, seq: str, balanced=False) -> float:
+    """
+    Calculate the accuracy between `ref` and `seq`
+    """
+    alignment = parasail.sw_trace_striped_32(ref, seq, 8, 4, parasail.dnafull)
+    counts = defaultdict(int)
+    _, cigar = __parasail_to_sam(alignment, seq)
+
+    for count, op  in re.findall(__split_cigar, cigar):
+        counts[op] += int(count)
+
+    if balanced:
+        accuracy = (counts['='] - counts['I']) / (counts['='] + counts['X'] + counts['D'])
+    else:
+        accuracy = counts['='] / (counts['='] + counts['I'] + counts['X'] + counts['D'])
+
+    return accuracy * 100
+
+
+def assemble(reads: t.List[str], window_size: int, stride: int, alphabet: t.Dict[int, str] = ALPHABET) -> str:
     """Assemble a list of reads into a string
 
     Args:
@@ -62,7 +83,7 @@ def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int
     """
     jump_step_ratio: float = stride / window_size
 
-    assembled_with_probabilities: List[List[float]] = chiron.simple_assembly(
+    assembled_with_probabilities: t.List[t.List[float]] = chiron.simple_assembly(
         reads, jump_step_ratio)
     assembled_as_numbers: np.ndarray[int] = np.argmax(
         assembled_with_probabilities, axis=0)
@@ -71,7 +92,7 @@ def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int
     return assembled
 
 
-def convert_idx_to_base_sequence(lst: List[int], alphabet: str = ALPHABET_VALUES) -> str:
+def convert_idx_to_base_sequence(lst: t.List[int], alphabet: t.List[str] = ALPHABET_VALUES) -> str:
     """Converts a list of base indexes into a str given an alphabet, e.g. [1, 0, 1, 3] -> 'A-AG'"""
 
     assert max(lst) < len(
@@ -81,7 +102,7 @@ def convert_idx_to_base_sequence(lst: List[int], alphabet: str = ALPHABET_VALUES
     return __remove_blanks(__concat_str([alphabet[x] for x in lst]))
 
 
-def decode(predictions: t.Tensor3D, alphabet: str = ALPHABET_STR, beam_size: int = 25, threshold: float = 0.1, predictions_in_log: bool = True) -> List[str]:
+def decode(predictions: t.Tensor3D, alphabet: str = ALPHABET_STR, beam_size: int = 25, threshold: float = 0.1, predictions_in_log: bool = True) -> t.List[str]:
     """Decode model posteriors to sequence.
 
     Args:
@@ -93,12 +114,12 @@ def decode(predictions: t.Tensor3D, alphabet: str = ALPHABET_STR, beam_size: int
     Returns:
         a decoded string
     """
-    assert beam_size > 0 and type(beam_size) == int, 'Beam size must be a non-zero positive integer'
+    assert beam_size > 0 and isinstance(beam_size, int), 'Beam size must be a non-zero positive integer'
     
     if predictions_in_log:
         predictions = convert_logsoftmax_to_softmax(predictions)
     # apply beam search on each window
-    decoded: List[str] = [beam_search(window.astype(np.float32), alphabet, beam_size, threshold)[0]
+    decoded: t.List[str] = [beam_search(window.astype(np.float32), alphabet, beam_size, threshold)[0]
                           for window in predictions]
         
     return decoded
@@ -126,14 +147,14 @@ def __remove_duplicates(s: str) -> str:
     return ''.join(i for i, _ in groupby(s))
 
 
-def __concat_str(ls: List[str]) -> str:
+def __concat_str(ls: t.List[str]) -> str:
     """Concatenates a list of strings into a single string."""
     return "".join(ls)
 
 
-def __calc_metrics_from_seq_matcher(seq_matcher: difflib.SequenceMatcher) -> Dict[str, int]:
+def __calc_metrics_from_seq_matcher(seq_matcher: difflib.SequenceMatcher) -> t.Dict[str, int]:
     """Calculate the metrics from a SequenceMatcher and store it in a tag-index dictionary."""
-    counts: Dict[str, int] = {'insert': 0,
+    counts: t.Dict[str, int] = {'insert': 0,
                               'delete': 0, 'equal': 0, 'replace': 0}
     for tag, i1, i2, j1, j2 in seq_matcher.get_opcodes():
         # Look at the inserted range rather than original
@@ -142,3 +163,39 @@ def __calc_metrics_from_seq_matcher(seq_matcher: difflib.SequenceMatcher) -> Dic
         else:
             counts[tag] += i2 - i1
     return counts
+
+
+__split_cigar = re.compile(r"(?P<len>\d+)(?P<op>\D+)")
+
+def __parasail_to_sam(result, seq):
+    """
+    Extract reference start and sam compatible cigar string.
+
+    :param result: parasail alignment result.
+    :param seq: query sequence.
+
+    :returns: reference start coordinate, cigar string.
+    """    
+
+    cigstr = result.cigar.decode.decode()
+    first = re.search(__split_cigar, cigstr)
+
+    first_count, first_op = first.groups()
+    prefix = first.group()
+    rstart = result.cigar.beg_ref
+    cliplen = result.cigar.beg_query
+
+    clip = '' if cliplen == 0 else '{}S'.format(cliplen)
+    if first_op == 'I':
+        pre = '{}S'.format(int(first_count) + cliplen)
+    elif first_op == 'D':
+        pre = clip
+        rstart = int(first_count)
+    else:
+        pre = '{}{}'.format(clip, prefix)
+
+    mid = cigstr[len(prefix):]
+    end_clip = len(seq) - result.end_query - 1
+    suf = '{}S'.format(end_clip) if end_clip > 0 else ''
+    new_cigstr = ''.join((pre, mid, suf))
+    return rstart, new_cigstr

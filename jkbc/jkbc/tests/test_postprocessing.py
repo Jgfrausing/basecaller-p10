@@ -62,7 +62,7 @@ def test_calc_sequence_error_metrics_different():
 def test_convert_idx_to_base_sequence_simple():
     # Arrange
     idx = [0, 2, 1, 3, 0]
-    alphabet = "ABCD"
+    alphabet = list("ABCD")
 
     # Act
     result =pp.convert_idx_to_base_sequence(idx, alphabet)
