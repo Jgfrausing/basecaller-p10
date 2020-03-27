@@ -73,15 +73,19 @@ $ ssh <username>@ai-pilot.srv.aau.dk
 * Save your conda environment to a file: `conda env export | grep -v "^prefix: " > <NAME_OF_FILE>.yml`
 * Create a new conda environment using a file: `conda env create -f <NAME_OF_FILE>.yml`
 
-## tmux tips
-If you create multiple tmux sessions, by:
-* `tmux new -s session1` and `tmux new -s session2`
+## Make new basecaller
+A script is created to ensure the correct structure of the notebook. This makes experimentation with models easier.
 
-And attach into one of them:
-* `tmux attach -t session1`
-
-Then you can switch between the sessions using:
-* `Ctrl` + `B` `(`
+The following practices should be adhered to:
+* Run `./new-basecaller <name-of-basecaller>` to create a new basecaller
+    * This will create a folder in *models-nbk* with the given name, and a notebook within that folder.
+* The field under *Build* should be the only place that differs between notebooks. 
+    * This makes it easier to adjust for changes made in pre- or post-processing, if needed.
+* The models are saved and loaded using the name of the notebook.
+    * Rename the notebook whenever changes are made and a new model is trained
+        * Run `git co -- <name-of-old-notebook>.ipynb`
+        * and `git add <name-of-new-notebook>.ipynb`
+        * this ensures that both versions of the model are saved and their traind weights can be loaded
 
 ## Make and load training data
 We created a script that reads hdf5 files, and saves training data into feather files. This greatly improves the speed that data is loaded into memory, and skips a lot of the preprocessing. 
@@ -131,3 +135,7 @@ To load the data do the following:
     train, valid = prep.convert_to_datasets(data, split=.8)
     databunch = DataBunch.create(train, valid, bs=BS)
     ```
+
+```python
+
+```
