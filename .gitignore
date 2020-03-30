@@ -1,7 +1,6 @@
 # Custom
 dataset.pickle
 data/
-!data/kmer-values/ #Except for kmer-values
 models/
 
 # Created by https://www.gitignore.io/api/linux,macos,python,windows,jupyternotebooks,visualstudiocode,pycharm
