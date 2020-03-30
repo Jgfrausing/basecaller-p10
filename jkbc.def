@@ -8,6 +8,6 @@ From: nvcr.io/nvidia/pytorch:20.02-py3
     echo ">>>>>>>>>> APT-GET UPDATE"
     apt-get update
     apt-get install -y python3-virtualenv python3-pip python3-setuptools git \
-	    libblas3 libblas-dev python3-dev lsb-release virtualenv tmux mmv rename
+	    libblas3 libblas-dev python3-dev lsb-release virtualenv tmux mmv rename man \
 
     echo ">>>>>>>>>> ALL DONE WITH %POST"
