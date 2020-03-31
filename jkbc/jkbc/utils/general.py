@@ -57,5 +57,6 @@ def get_newest_model(folder_path: t.PathLike):
 
 def __get_file_name(file_path: t.PathLike):
     file_name, _ = os.path.splitext(os.path.basename(file_path))
+
     return file_name
-    
+

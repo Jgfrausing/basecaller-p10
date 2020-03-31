@@ -36,7 +36,7 @@ def calc_accuracy(ref: str, seq: str, balanced=False) -> float:
     return accuracy * 100
 
 
-def assemble(reads: List[str], window_size: int, stride: int, alphabet: Dict[int, str]) -> str:
+def assemble(reads: t.List[str], window_size: int, stride: int, alphabet: t.Dict[int, str]) -> str:
     """Assemble a list of reads into a string
 
     Args:
@@ -68,7 +68,7 @@ def convert_idx_to_base_sequence(lst: t.List[int], alphabet: t.List[str] = ALPHA
     return __remove_blanks(__concat_str([alphabet[x] for x in lst]))
 
 
-def decode(predictions: t.Tensor3D, alphabet: str, beam_size: int = 25, threshold: float = 0.1, predictions_in_log: bool = True) -> List[str]:
+def decode(predictions: t.Tensor3D, alphabet: str, beam_size: int = 25, threshold: float = 0.1, predictions_in_log: bool = True) -> t.List[str]:
     """Decode model posteriors to sequence.
 
     Args:
