@@ -17,40 +17,6 @@ ALPHABET_VALUES = list(ALPHABET.values())
 ALPHABET_STR = ''.join(ALPHABET_VALUES)
 
 
-class Rates:
-    """A 'struct' containing the different types of rates (deletion, insertion, mismatch, identity, error)"""
-
-    def __init__(self, deletion: float, insertion: float, mismatch: float, identity: float, error: float):
-        self.deletion = deletion
-        self.insertion = insertion
-        self.mismatch = mismatch
-        self.identity = identity
-        self.error = error
-
-
-def calc_sequence_error_metrics(actual: str, predicted: str) -> Rates:
-    """Calculate several error metrics related to the edit-distance between two sequences.
-
-    Args:
-        actual: the correct sequence
-        predicted: the predicted sequence
-    Returns:
-        a Rates object with each of the different types of rates as fields
-    """
-
-    metrics = __calc_metrics_from_seq_matcher(
-        difflib.SequenceMatcher(None, actual, predicted))
-
-    len_actual: int = len(actual)
-    rate_deletion: float = metrics['delete'] / len_actual
-    rate_insertion: float = metrics['insert'] / len_actual
-    rate_mismatch: float = metrics['replace'] / len_actual
-    rate_identity: float = 1 - rate_deletion - rate_mismatch
-    rate_error: float = rate_deletion + rate_insertion + rate_mismatch
-
-    return Rates(rate_deletion, rate_insertion, rate_mismatch, rate_identity, rate_error)
-
-
 def calc_accuracy(ref: str, seq: str, balanced=False) -> float:
     """
     Calculate the accuracy between `ref` and `seq`
