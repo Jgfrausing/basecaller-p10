@@ -28,6 +28,7 @@ def test_calc_accuracy_identical():
     # Assert
     assert accuracy == pytest.approx(100)
 
+'''
 def test_calc_accuracy_bad():
     # Arrange
     s1: str = 'AAGGCC'
@@ -38,6 +39,7 @@ def test_calc_accuracy_bad():
 
     # Assert
     assert accuracy == pytest.approx(0)
+'''
 
 
 def test_convert_idx_to_base_sequence_simple():

@@ -82,23 +82,40 @@ def get_read_info_from_open_file(hdf5_file: h5py.File, read_id: str) -> t.Tuple[
 
 
 def write_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray, np.ndarray, t.List[int]]) -> None:
-    x, y, y_lengths = data
+    assert len(data) == 3, "Data should have three fields: x, y, y_lengths"
+    
+    write_any_data_to_feather_file(folder_path, data, ["x", "y", "y_lengths"])
+
+    
+def write_kd_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray, np.ndarray, t.List[int], np.ndarray]) -> None:
+  assert len(data) == 4, "Data should have three fields: x, y, y_lengths, y_teacher"
+  write_any_data_to_feather_file(folder_path, data, ["x", "y", "y_lengths", "y_teacher"])
+
+
+def write_any_data_to_feather_file(folder_path: t.PathLike, data, names: t.List[str]) -> None:
+    assert len(data) == len(names), "Data parts and names should match in length"
+    
     __make_dir(folder_path)
-
-    feather.write_dataframe(pd.DataFrame(data=list(x)),
-                            os.path.join(folder_path, 'x'))
-    feather.write_dataframe(pd.DataFrame(data=list(y)),
-                            os.path.join(folder_path, 'y'))
-    feather.write_dataframe(pd.DataFrame(data=list(y_lengths)),
-                            os.path.join(folder_path, 'y_lengths'))
-
-
+    for i in range(len(names)):
+        name = names[i]
+        d = data[i]
+        feather.write_dataframe(pd.DataFrame(data=list(d)), os.path.join(folder_path, name))
+    
 def read_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, np.ndarray, t.List[int]]:
     x = feather.read_dataframe(os.path.join(folder_path, 'x'))
     y = feather.read_dataframe(os.path.join(folder_path, 'y'))
     y_lengths = feather.read_dataframe(os.path.join(folder_path, 'y_lengths'))
 
     return x.to_numpy(), y.to_numpy(dtype=np.float32), y_lengths.to_numpy().flatten().tolist()
+
+  
+def read_kd_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, np.ndarray, t.List[int], np.ndarray]:
+    x = feather.read_dataframe(os.path.join(folder_path, 'x'))
+    y = feather.read_dataframe(os.path.join(folder_path, 'y'))
+    y_lengths = feather.read_dataframe(os.path.join(folder_path, 'y_lengths'))
+    y_teacher = feather.read_dataframe(os.path.join(folder_path, 'y_teacher'))
+
+    return x.to_numpy(), y.to_numpy(dtype=np.float32), y_lengths.to_numpy().flatten().tolist(), y_teacher.to_numpy(dtype=np.float32)
 
 def __make_dir(path):
     if not os.path.exists(path):
