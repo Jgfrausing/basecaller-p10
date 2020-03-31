@@ -1,8 +1,8 @@
 # Custom
 dataset.pickle
 data/
-models/
-
+nbs/models/*/models
+p9/
 # Created by https://www.gitignore.io/api/linux,macos,python,windows,jupyternotebooks,visualstudiocode,pycharm
 # Edit at https://www.gitignore.io/?templates=linux,macos,python,windows,jupyternotebooks,visualstudiocode,pycharm
 
