@@ -6,8 +6,6 @@ import jkbc.utils.preprocessing as prep
 import jkbc.types as t
 
 
-# -
-
 def ctc_loss(prediction_size: int, batch_size: int, alphabet_size:int) -> functools.partial:
     def __ctc_loss(y_pred_lengths, alphabet_size, y_pred_b: torch.Tensor, y_b: torch.Tensor, y_lengths) -> float:
         if y_pred_lengths.shape[0] != y_pred_b.shape[0]:
@@ -68,8 +66,8 @@ def ctc_error(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0, b
         val, count = 0.0, 0
         for index in range(len(decoded)):
             actual = pop.convert_idx_to_base_sequence(labels[index], alphabet_val)
-            error = pop.calc_sequence_error_metrics(actual, decoded[index])
-            val += error.error
+            accuracy = pop.calc_accuracy(actual, decoded[index])
+            val += accuracy
             count += 1
             
         return val, count
