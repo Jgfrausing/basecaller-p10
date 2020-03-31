@@ -10,6 +10,7 @@ import torch
 import jkbc.types as t
 import jkbc.utils.files as bc_files
 import jkbc.utils.postprocessing as pop
+import jkbc.utils.bonito.data as bonito
 
 BLANK_ID = 0
 
@@ -139,16 +140,14 @@ class SignalCollection(abc.Sequence):
         read_id = self.read_idx[read_id_index]
         print(f"Processing {read_id} ({read_id_index})")
 
-        dac, ref_to_signal, reference = bc_files.get_read_info_from_file(
-            self.filename, read_id)
-        signal = _standardize(dac)
+        with h5py.File(self.filename, 'r') as f:
+            read = f['Reads'][read_id]
+            signal, ref_to_signal, reference = bonito.scale_and_align(read)
         
         num_of_bases = len(reference)
         index_base_start = 0
         last_start_signal = ref_to_signal[-1] - self.window_size
-
         for window_signal_start in range(ref_to_signal[0], last_start_signal, self.stride):
-            
             # Get a window of the signal
             window_signal_end = window_signal_start + self.window_size
             window_signal = signal[window_signal_start:window_signal_end]
