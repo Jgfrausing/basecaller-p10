@@ -2,6 +2,7 @@ import shutil
 import pathlib as pl
 
 import pytest
+import numpy as np
 
 import jkbc.utils.files as f
 
@@ -52,10 +53,10 @@ def test_write_and_read_data_to_feather_file():
 def test_write_kd_data_to_feather_file__no_error():
   # Arrange
   N = 10
-  x = [[.1] for _ in range(N)]
+  x = [[.1, .2, .3] for _ in range(N)]
   y = list(range(N))
   y_lengths = [1 for _ in range(N)]
-  y_teacher = [[.15] for _ in range(N)]
+  y_teacher = np.random.rand(N, 20)
   
   # Act + Assert
   try:
@@ -67,10 +68,13 @@ def test_write_kd_data_to_feather_file__no_error():
 def test_kd_write_and_read_data_to_feather_file():
   # Arrange
   N = 10
-  x1 = [[.1] for _ in range(N)]
+  OUT_SIZE = 7
+  ALPHABET_SIZE = 5
+  
+  x1 = [[.1, .2, .3] for _ in range(N)]
   y1 = list(range(N))
   y_lengths1 = [1 for _ in range(N)]
-  y_teacher1 = [[.15] for _ in range(N)]
+  y_teacher1 = np.random.rand(N, OUT_SIZE * ALPHABET_SIZE)
   
   # Act
   try:
@@ -84,8 +88,9 @@ def test_kd_write_and_read_data_to_feather_file():
   assert_eq_lists(x1, x2, contains_floats)
   assert_eq_lists(y1, y2)
   assert_eq_lists(y_lengths1, y_lengths2)
-  assert_eq_lists(y_teacher1, y_teacher2, contains_floats)
-    
+  assert y_teacher2.shape == (N, OUT_SIZE, ALPHABET_SIZE)
+  y_teacher1 = y_teacher1.reshape(N, OUT_SIZE, ALPHABET_SIZE)
+  np.testing.assert_almost_equal(y_teacher1.reshape(N, OUT_SIZE, ALPHABET_SIZE), y_teacher2)
     
     
 def assert_eq_lists(l1, l2, contains_floats: bool = False):

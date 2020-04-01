@@ -89,6 +89,7 @@ def write_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray
     
 def write_kd_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray, np.ndarray, t.List[int], np.ndarray]) -> None:
   assert len(data) == 4, "Data should have three fields: x, y, y_lengths, y_teacher"
+  
   write_any_data_to_feather_file(folder_path, data, ["x", "y", "y_lengths", "y_teacher"])
 
 
@@ -109,13 +110,19 @@ def read_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, 
     return x.to_numpy(), y.to_numpy(dtype=np.float32), y_lengths.to_numpy().flatten().tolist()
 
   
-def read_kd_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, np.ndarray, t.List[int], np.ndarray]:
+def read_kd_data_from_feather_file(folder_path: t.PathLike, alphabet_size: int = 5) -> t.Tuple[np.ndarray, np.ndarray, t.List[int], np.ndarray]:
     x = feather.read_dataframe(os.path.join(folder_path, 'x'))
     y = feather.read_dataframe(os.path.join(folder_path, 'y'))
     y_lengths = feather.read_dataframe(os.path.join(folder_path, 'y_lengths'))
     y_teacher = feather.read_dataframe(os.path.join(folder_path, 'y_teacher'))
+    
+    # Reshape y_teacher, because feather always saves in 2d
+    y_teacher = y_teacher.to_numpy(dtype=np.float32)
+    max_label_len = y_teacher.shape[1] // alphabet_size
+    window_count = y_teacher.shape[0]
+    y_teacher = y_teacher.reshape((window_count, max_label_len, alphabet_size))
 
-    return x.to_numpy(), y.to_numpy(dtype=np.float32), y_lengths.to_numpy().flatten().tolist(), y_teacher.to_numpy(dtype=np.float32)
+    return x.to_numpy(), y.to_numpy(dtype=np.float32), y_lengths.to_numpy().flatten().tolist(), y_teacher
 
 def __make_dir(path):
     if not os.path.exists(path):
