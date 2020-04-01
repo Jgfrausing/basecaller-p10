@@ -3,6 +3,7 @@ import pathlib as pl
 
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
+from torch import Tensor
 
 PathLike = NewType("PathLike", Union[pl.Path, str])
 
