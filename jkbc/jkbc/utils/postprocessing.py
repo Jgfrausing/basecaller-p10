@@ -7,6 +7,7 @@ from collections import defaultdict
 import numpy as np
 from fast_ctc_decode import beam_search
 import parasail
+import torch
 
 import jkbc.utils.chiron.assembly as chiron
 import jkbc.types as t
@@ -68,7 +69,7 @@ def convert_idx_to_base_sequence(lst: t.List[int], alphabet: t.List[str] = ALPHA
     return __remove_blanks(__concat_str([alphabet[x] for x in lst]))
 
 
-def decode(predictions: t.Tensor3D, alphabet: str, beam_size: int = 25, threshold: float = 0.1, predictions_in_log: bool = True) -> t.List[str]:
+def decode(predictions: t.Tensor3D, alphabet: str, beam_size: int = 25, threshold: float = 0.1) -> t.List[str]:
     """Decode model posteriors to sequence.
 
     Args:
@@ -82,16 +83,23 @@ def decode(predictions: t.Tensor3D, alphabet: str, beam_size: int = 25, threshol
     """
     assert beam_size > 0 and isinstance(beam_size, int), 'Beam size must be a non-zero positive integer'
     
-    if predictions_in_log:
-        predictions = convert_logsoftmax_to_softmax(predictions)
+    # Todo: test what works best
+    predictions = normalise_last_dim(predictions)
+    #predictions = normalise_last_dim(torch.nn.LogSoftmax(dim=2)(predictions))
+    #predictions = torch.nn.Softmax(dim=2)(predictions)
+    
     # apply beam search on each window
     decoded: t.List[str] = [beam_search(window.astype(np.float32), alphabet, beam_size, threshold)[0]
-                          for window in predictions]
+                          for window in predictions.cpu().numpy()]
         
     return decoded
 
 
 # HELPERS
+
+def normalise_last_dim(tensor: t.Tensor3D):
+    return (tensor[:,:]-torch.min(tensor[:,:]))/(torch.max(tensor[:,:])-torch.min(tensor[:,:]))
+
 
 def convert_logsoftmax_to_softmax(log_softmax_tensor: np.ndarray) -> np.ndarray:
     """Use before beam search"""

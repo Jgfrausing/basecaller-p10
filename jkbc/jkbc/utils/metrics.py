@@ -5,19 +5,63 @@ import jkbc.utils.postprocessing as pop
 import jkbc.utils.preprocessing as prep
 import jkbc.types as t
 
+class Loss():
+    '''Abstract class for computing loss'''
+    def loss(self):
+        pass
 
-def ctc_loss(prediction_size: int, batch_size: int, alphabet_size:int) -> functools.partial:
-    def __ctc_loss(y_pred_lengths, alphabet_size, y_pred_b: torch.Tensor, y_b: torch.Tensor, y_lengths) -> float:
-        if y_pred_lengths.shape[0] != y_pred_b.shape[0]:
-            new_len = y_pred_b.shape[0]
-            y_pred_lengths_ = y_pred_lengths[:new_len]
-        else:
-            y_pred_lengths_ = y_pred_lengths
+class CtcLoss(Loss):
+    '''CTC loss'''
+    def __init__(self, prediction_size: int, batch_size: int, alphabet_size:int):
+        self.prediction_size = prediction_size
+        self.batch_size = batch_size
+        self.alphabet_size = alphabet_size
+        self.log_softmax = nn.LogSoftmax(dim=2)
+    
+    def loss(self) -> functools.partial:
+        def __ctc_loss(y_pred_lengths, alphabet_size, y_pred_b: torch.Tensor, y_b: torch.Tensor, y_lengths) -> float:
+            if y_pred_lengths.shape[0] != y_pred_b.shape[0]:
+                new_len = y_pred_b.shape[0]
+                y_pred_lengths_ = y_pred_lengths[:new_len]
+            else:
+                y_pred_lengths_ = y_pred_lengths
 
-        y_pred_b_ = y_pred_b.view((y_pred_b.shape[1], y_pred_b.shape[0], alphabet_size))
+            y_pred_b_ = y_pred_b.view((y_pred_b.shape[1], y_pred_b.shape[0], alphabet_size))
 
-        return nn.CTCLoss()(y_pred_b_, y_b, y_pred_lengths_, y_lengths)
-    return partial(__ctc_loss, prep.get_prediction_lengths(prediction_size, batch_size), alphabet_size)
+            return nn.CTCLoss()(self.log_softmax(y_pred_b_), y_b, y_pred_lengths_, y_lengths)
+        return partial(__ctc_loss, prep.get_prediction_lengths(self.prediction_size, self.batch_size), self.alphabet_size)
+
+
+class KdLoss(Loss):
+    '''Konwledge distillation loss'''
+    def __init__(self, alpha: float, temperature: float, label_loss: Loss):
+        """Args:
+            alpha: How much the teacher controls the training. (1=teacher only, 0=no teacher)
+            temperature: Used to smooth output from teacher
+            label_loss: Instance of a Loss class
+        """
+        self.temperature = temperature
+        self.label_weight = 1-alpha
+        self.teacher_weight = alpha*temperature**2
+        self.softmax = nn.Softmax(dim=2)
+        self.log_softmax = nn.LogSoftmax(dim=2)
+        self.label_loss = label_loss.loss()
+
+    def loss(self) -> functools.partial:
+        def __combined(self, y_pred_b: t.Tensor, y_b: t.Tensor, y_lengths: t.List[int], y_teacher: t.Tensor3D) -> float:
+            
+            label_loss = self.label_loss.loss(self.log_softmax(y_pred_b), y_b, y_lengths)
+            teacher = self.__knowledge_distillation_loss(y_pred_b, y_teacher)
+            
+            return self.label_weight*label+self.teacher_weight*teacher
+        
+        return partial(self.__combined, self)
+    
+    def __knowledge_distillation_loss(self, y_pred_b: t.Tensor, y_teacher: t.Tensor3D) -> float:
+        soft_teacher = self.softmax(y_teacher/self.temperature)
+        log_soft_pred = self.log_softmax(y_pred_b/self.temperature)
+        loss = torch.distributions.kl.kl_divergence(soft_teacher, log_soft_pred)
+        return loss
 
 class ErrorRate(Callback):
     "Error rate metrics computation."
@@ -55,11 +99,11 @@ def ctc_error(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0, b
         Average Rates.error for the considered windows
     """
     def ctc_error(alphabet_val, alphabet_str, beam_size, threshold, batch_slice, last_output, last_target, **kwargs):
-        # last_target is a tuple (labels, label_lengths)
+        # last_target is a tuple (labels, label_lengths (and y_teacher for KD))
         labels = last_target[0]
         # Reducing the amount of windows considered
         batch_slice = min(len(last_output), batch_slice)
-        x = last_output.detach().cpu().numpy()[:batch_slice]
+        x = last_output[:batch_slice].detach()
         # Decode to get predictions
         decoded = pop.decode(x, threshold=threshold, beam_size=beam_size, alphabet=alphabet_str)
         # Getting error for each window
@@ -77,3 +121,6 @@ def ctc_error(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0, b
     alphabet_val = list(alphabet.values())
     alphabet_str = ''.join(alphabet_val)
     return partial(ctc_error, alphabet_val, alphabet_str, beam_size, threshold, batch_slice)
+# -
+
+
