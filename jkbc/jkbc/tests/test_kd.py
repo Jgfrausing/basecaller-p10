@@ -23,19 +23,15 @@ def teardown_function(function):
 def test_generate_and_save_kd_data_from_teacher_with_load():
   # Arrange
   teacher_model = TeacherModel()
+  teacher_name = "teacher_kd"
   
   x = torch.rand((N, FEATURES, WS))
-  y = torch.randint(10, (N, MAX_LABEL_LEN))
-  y_lengths = [3 for _ in range(N)]
   
   # Act
-  x_kd, y_kd, y_lengths_kd, y_teacher_kd = kd.generate_and_save_kd_data_from_teacher(FOLDER_PATH, x, y, y_lengths, teacher_model, bs = 2, ws = WS)
-  x_f, y_f, y_lengths_f, y_teacher_f = f.read_kd_data_from_feather_file(FOLDER_PATH)
+  y_teacher_kd = kd.generate_and_save_y_teacher(FOLDER_PATH, teacher_name, x, teacher_model, bs = 2, ws = WS)
+  y_teacher_f = f.read_kd_y_teacher_from_feather_file(FOLDER_PATH, teacher_name, OUT_SIZE, ALPHABET_SIZE)
   
   # Assert
-  assert x_f.shape == (N, WS)
-  assert y_f.shape == (N, MAX_LABEL_LEN)
-  assert len(y_lengths_f) == N
   assert y_teacher_f.shape == (N, OUT_SIZE, ALPHABET_SIZE)
   ## Consider checking that y_teacher_f == y_teacher_kd
   

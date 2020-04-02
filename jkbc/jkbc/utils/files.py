@@ -87,10 +87,19 @@ def write_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray
     write_any_data_to_feather_file(folder_path, data, ["x", "y", "y_lengths"])
 
     
-def write_kd_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray, np.ndarray, t.List[int], np.ndarray]) -> None:
-  assert len(data) == 4, "Data should have three fields: x, y, y_lengths, y_teacher"
+    
+    
+##################################### KD ######################################
+
+TEACHERS_FOLDER = "teachers"
+
+def write_kd_y_teacher_to_feather_file(folder_path: t.PathLike, teacher_name: str, y_teacher: np.ndarray) -> None:
+  # Make y_teacher 2-dimension, so it can be saved as a feather
+  y_teacher = y_teacher.reshape(y_teacher.shape[0], -1)
+
+  teachers_folder = pl.Path(folder_path)/TEACHERS_FOLDER
   
-  write_any_data_to_feather_file(folder_path, data, ["x", "y", "y_lengths", "y_teacher"])
+  write_any_data_to_feather_file(teachers_folder, [y_teacher], [teacher_name])
 
 
 def write_any_data_to_feather_file(folder_path: t.PathLike, data, names: t.List[str]) -> None:
@@ -109,20 +118,21 @@ def read_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, 
 
     return x.to_numpy(), y.to_numpy(dtype=np.float32), y_lengths.to_numpy().flatten().tolist()
 
-  
-def read_kd_data_from_feather_file(folder_path: t.PathLike, alphabet_size: int = 5) -> t.Tuple[np.ndarray, np.ndarray, t.List[int], np.ndarray]:
-    x = feather.read_dataframe(os.path.join(folder_path, 'x'))
-    y = feather.read_dataframe(os.path.join(folder_path, 'y'))
-    y_lengths = feather.read_dataframe(os.path.join(folder_path, 'y_lengths'))
-    y_teacher = feather.read_dataframe(os.path.join(folder_path, 'y_teacher'))
+ 
+def read_kd_y_teacher_from_feather_file(folder_path: t.PathLike, teacher_name: str, out_size: int, alphabet_size: int = 5) -> np.ndarray:
     
-    # Reshape y_teacher, because feather always saves in 2d
-    y_teacher = y_teacher.to_numpy(dtype=np.float32)
-    max_label_len = y_teacher.shape[1] // alphabet_size
-    window_count = y_teacher.shape[0]
-    y_teacher = y_teacher.reshape((window_count, max_label_len, alphabet_size))
+    teachers_folder = pl.Path(folder_path)/TEACHERS_FOLDER
+    
+    y_teacher = feather.read_dataframe(os.path.join(teachers_folder, teacher_name))
+    
+    return y_teacher.to_numpy().reshape(y_teacher.shape[0], out_size, alphabet_size)
 
-    return x.to_numpy(), y.to_numpy(dtype=np.float32), y_lengths.to_numpy().flatten().tolist(), y_teacher
+def read_kd_data_from_feather_file(folder_path: t.PathLike, teacher_name: str, out_size: int, alphabet_size: int = 5) -> t.Tuple[np.ndarray, np.ndarray, t.List[int], np.ndarray]:
+    x, y, y_lengths = read_data_from_feather_file(folder_path)
+    
+    y_teacher = read_kd_y_teacher_from_feather_file(folder_path, teacher_name, out_size, alphabet_size) 
+
+    return x, y, y_lengths, y_teacher 
 
 def __make_dir(path):
     if not os.path.exists(path):
