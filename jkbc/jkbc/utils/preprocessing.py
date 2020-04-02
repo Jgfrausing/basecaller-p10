@@ -131,7 +131,7 @@ class SignalCollection(abc.Sequence):
         with h5py.File(filename, 'r') as h5file:
             self.read_idx = list(h5file['Reads'].keys())
 
-    def __getitem__(self, read_id_index: int) -> t.Tuple[t.Tensor2D, t.Tensor2D, t.Tensor1D]:
+    def __getitem__(self, read_id_index: int) -> ReadObject:
         """
         Returns signal_windows, label_windows, and a reference for a single signal.
         """
@@ -194,7 +194,6 @@ class SignalCollection(abc.Sequence):
         y_padded = add_label_padding(labels = y, fixed_label_len = label_len)
 
         return (x, y_padded, y_lengths)
-    
     
     def generator(self):
         """Get the next piece of data.

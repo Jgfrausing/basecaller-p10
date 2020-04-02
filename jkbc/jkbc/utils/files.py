@@ -86,7 +86,7 @@ def write_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray
     
     write_any_data_to_feather_file(folder_path, data, ["x", "y", "y_lengths"])
 
-    
+
 def write_kd_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray, np.ndarray, t.List[int], np.ndarray]) -> None:
   assert len(data) == 4, "Data should have three fields: x, y, y_lengths, y_teacher"
   write_any_data_to_feather_file(folder_path, data, ["x", "y", "y_lengths", "y_teacher"])
@@ -100,7 +100,7 @@ def write_any_data_to_feather_file(folder_path: t.PathLike, data, names: t.List[
         name = names[i]
         d = data[i]
         feather.write_dataframe(pd.DataFrame(data=list(d)), os.path.join(folder_path, name))
-    
+
 def read_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, np.ndarray, t.List[int]]:
     x = feather.read_dataframe(os.path.join(folder_path, 'x'))
     y = feather.read_dataframe(os.path.join(folder_path, 'y'))
@@ -108,7 +108,7 @@ def read_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, 
 
     return x.to_numpy(), y.to_numpy(dtype=np.float32), y_lengths.to_numpy().flatten().tolist()
 
-  
+
 def read_kd_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, np.ndarray, t.List[int], np.ndarray]:
     x = feather.read_dataframe(os.path.join(folder_path, 'x'))
     y = feather.read_dataframe(os.path.join(folder_path, 'y'))

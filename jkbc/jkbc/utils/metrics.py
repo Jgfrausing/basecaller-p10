@@ -5,6 +5,8 @@ import jkbc.utils.postprocessing as pop
 import jkbc.utils.preprocessing as prep
 import jkbc.types as t
 
+from fastai.callbacks.tracker import SaveModelCallback
+
 class Loss():
     '''Abstract class for computing loss'''
     def loss(self):
