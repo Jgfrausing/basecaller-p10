@@ -6,26 +6,22 @@ from collections import defaultdict
 
 import numpy as np
 from fast_ctc_decode import beam_search
-import parasail
 import torch
 
 import jkbc.utils.chiron.assembly as chiron
 import jkbc.types as t
-
-BLANK_ID = 0
-ALPHABET = {0:'-', 1:'A', 2:'C', 3:'G', 4:'T'}
-ALPHABET_VALUES = list(ALPHABET.values())
-ALPHABET_STR = ''.join(ALPHABET_VALUES)
+import jkbc.utils.bonito.decode as bonito
 
 
-def calc_accuracy(ref: str, seq: str, balanced=False) -> float:
+def calc_accuracy(ref: str, seq: str, balanced=False, return_alignment=False) -> t.Union[float, t.Tuple[float, str]]:
     """
     Calculate the accuracy between `ref` and `seq`
     """
-    alignment = parasail.sw_trace_striped_32(ref, seq, 8, 4, parasail.dnafull)
+    alignment, string = bonito.align(ref, seq)
+    cigar = str(alignment.cigar.decode)
+    
     counts = defaultdict(int)
-    _, cigar = __parasail_to_sam(alignment, seq)
-
+    __split_cigar = re.compile(r"(?P<len>\d+)(?P<op>\D+)")
     for count, op  in re.findall(__split_cigar, cigar):
         counts[op] += int(count)
 
@@ -33,8 +29,10 @@ def calc_accuracy(ref: str, seq: str, balanced=False) -> float:
         accuracy = (counts['='] - counts['I']) / (counts['='] + counts['X'] + counts['D'])
     else:
         accuracy = counts['='] / (counts['='] + counts['I'] + counts['X'] + counts['D'])
-
-    return accuracy * 100
+    
+    if return_alignment: 
+        return accuracy, string
+    return accuracy
 
 
 def assemble(reads: t.List[str], window_size: int, stride: int, alphabet: t.Dict[int, str]) -> str:
@@ -61,7 +59,7 @@ def assemble(reads: t.List[str], window_size: int, stride: int, alphabet: t.Dict
     return assembled
 
 
-def convert_idx_to_base_sequence(lst: t.List[int], alphabet: t.List[str] = ALPHABET_VALUES) -> str:
+def convert_idx_to_base_sequence(lst: t.List[int], alphabet: t.List[str]) -> str:
     """Converts a list of base indexes into a str given an alphabet, e.g. [1, 0, 1, 3] -> 'A-AG'"""
 
     assert max(lst) < len(
@@ -139,39 +137,3 @@ def __calc_metrics_from_seq_matcher(seq_matcher: difflib.SequenceMatcher) -> t.D
         else:
             counts[tag] += i2 - i1
     return counts
-
-
-__split_cigar = re.compile(r"(?P<len>\d+)(?P<op>\D+)")
-
-def __parasail_to_sam(result, seq):
-    """
-    Extract reference start and sam compatible cigar string.
-
-    :param result: parasail alignment result.
-    :param seq: query sequence.
-
-    :returns: reference start coordinate, cigar string.
-    """    
-
-    cigstr = result.cigar.decode.decode()
-    first = re.search(__split_cigar, cigstr)
-
-    first_count, first_op = first.groups()
-    prefix = first.group()
-    rstart = result.cigar.beg_ref
-    cliplen = result.cigar.beg_query
-
-    clip = '' if cliplen == 0 else '{}S'.format(cliplen)
-    if first_op == 'I':
-        pre = '{}S'.format(int(first_count) + cliplen)
-    elif first_op == 'D':
-        pre = clip
-        rstart = int(first_count)
-    else:
-        pre = '{}{}'.format(clip, prefix)
-
-    mid = cigstr[len(prefix):]
-    end_clip = len(seq) - result.end_query - 1
-    suf = '{}S'.format(end_clip) if end_clip > 0 else ''
-    new_cigstr = ''.join((pre, mid, suf))
-    return rstart, new_cigstr

@@ -50,8 +50,8 @@ def get_notebook_name():
 
 def get_newest_model(folder_path: t.PathLike):
     import glob
-    
     list_of_files = glob.glob(os.path.join(folder_path, '*')) # * means all if need specific format then *.csv
+    
     return __get_file_name(max(list_of_files, key=os.path.getctime))
 
 

@@ -6,18 +6,18 @@ import numpy as np
 import jkbc.utils.preprocessing as prep
 import jkbc.utils.files as f
 import jkbc.types as t
+import jkbc.utils.constants as constants
 
 
 # DEFAULT PARAMETERS
 FIX_LABEL_LEN  = 70  # Needed to avoid issues with jacked arrays
-BLANK_ID       = prep.BLANK_ID
 FOLDERPATH     = 'data/feather-files/'
 STRIDE         = 300 # We make stride same size as window to make more distinct training data
 
 def make_file(data_path: t.PathLike, folder_path: t.PathLike, ran: range, label_len: int) -> None:
     # Get data range
     collection = prep.SignalCollection(data_path, max_labels_per_window=FIX_LABEL_LEN, stride=STRIDE)
-    data = collection.get_range(ran, label_len);
+    data = collection.get_range(ran, label_len, constants.BLANK_ID);
 
     # Write to file
     f.write_data_to_feather_file(folder_path, data)

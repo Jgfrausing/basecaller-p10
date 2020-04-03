@@ -9,10 +9,8 @@ import torch
 
 import jkbc.types as t
 import jkbc.utils.files as bc_files
-import jkbc.utils.postprocessing as pop
+import jkbc.utils.constants as constants
 import jkbc.utils.bonito.data as bonito
-
-BLANK_ID = 0
 
 
 class ReadObject:
@@ -31,6 +29,9 @@ class ReadObject:
         self.x = x
         self.y = y
         self.reference = reference
+        
+    def x_for_prediction(self, device):
+        return torch.tensor(self.x)[:,None].to(device=device)
 
 class SizedTensorDataset(t.TensorDataset):
     r"""Dataset wrapping tensors.
@@ -178,7 +179,7 @@ class SignalCollection(abc.Sequence):
             
         return ReadObject(x, y, reference)
 
-    def get_range(self, ran: range, label_len: int)-> t.Tuple[np.ndarray, np.ndarray, list]:
+    def get_range(self, ran: range, label_len: int, blank_id:int)-> t.Tuple[np.ndarray, np.ndarray, list]:
         x = None
         y = None
         for i in ran:
@@ -193,7 +194,7 @@ class SignalCollection(abc.Sequence):
     
         # Adding padding
         y_lengths = [len(lst) for lst in y]
-        y_padded = add_label_padding(labels = y, fixed_label_len = label_len)
+        y_padded = add_label_padding(labels = y, fixed_label_len = label_len, blank_id)
 
         return (x, y_padded, y_lengths)
     
@@ -210,7 +211,7 @@ class SignalCollection(abc.Sequence):
         return len(self.read_idx)
 
 
-def add_label_padding(labels: t.Tensor2D, fixed_label_len: int) -> t.Tensor2D:
+def add_label_padding(labels: t.Tensor2D, fixed_label_len: int, blank_id: int) -> t.Tensor2D:
     """Pads each label with padding_val
 
     Example:
@@ -221,7 +222,7 @@ def add_label_padding(labels: t.Tensor2D, fixed_label_len: int) -> t.Tensor2D:
         will cap label lengths exceding fixed_label_len
     """
     
-    return np.array([l + [BLANK_ID] * (fixed_label_len - len(l)) for l in labels], dtype='float32')
+    return np.array([l + [blank_id] * (fixed_label_len - len(l)) for l in labels], dtype='float32')
 
 
 def _normalize(dac, dmin: float = 0, dmax: float = 850):
