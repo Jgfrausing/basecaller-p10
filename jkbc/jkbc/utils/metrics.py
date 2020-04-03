@@ -28,7 +28,7 @@ class CtcLoss(Loss):
             else:
                 y_pred_lengths_ = y_pred_lengths
 
-            y_pred_b_ = y_pred_b.view((y_pred_b.shape[1], y_pred_b.shape[0], alphabet_size))
+            y_pred_b_ = y_pred_b.reshape((y_pred_b.shape[1], y_pred_b.shape[0], alphabet_size))
 
             return nn.CTCLoss()(self.log_softmax(y_pred_b_), y_b, y_pred_lengths_, y_lengths)
         return partial(__ctc_loss, prep.get_prediction_lengths(self.prediction_size, self.batch_size), self.alphabet_size)

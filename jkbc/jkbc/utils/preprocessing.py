@@ -5,6 +5,7 @@ import warnings
 import h5py as h5py
 import numpy as np
 import torch
+from tqdm import tqdm
 
 
 import jkbc.types as t
@@ -25,7 +26,8 @@ class ReadObject:
         reference: the full genome reference
     """
 
-    def __init__(self, x: t.Tensor2D, y: t.Tensor2D, reference: t.Tensor1D):
+    def __init__(self, read_id, x: t.Tensor2D, y: t.Tensor2D, reference: t.Tensor1D):
+        self.id = read_id 
         self.x = x
         self.y = y
         self.reference = reference
@@ -140,7 +142,6 @@ class SignalCollection(abc.Sequence):
         x, y = [], []
 
         read_id = self.read_idx[read_id_index]
-        print(f"Processing {read_id} ({read_id_index})")
 
         with h5py.File(self.filename, 'r') as f:
             read = f['Reads'][read_id]
@@ -177,12 +178,12 @@ class SignalCollection(abc.Sequence):
             x.append(window_signal)
             y.append(labels)
             
-        return ReadObject(x, y, reference)
+        return ReadObject(read_id, x, y, reference)
 
-    def get_range(self, ran: range, label_len: int, blank_id:int)-> t.Tuple[np.ndarray, np.ndarray, list]:
+    def get_range(self, ran: t.List[int], label_len: int, blank_id:int)-> t.Tuple[np.ndarray, np.ndarray, list]:
         x = None
         y = None
-        for i in ran:
+        for i in tqdm(ran):
             # Getting data
             data = self[i]
             data_fields = np.array(data.x), np.array(data.y), data.reference
@@ -194,7 +195,7 @@ class SignalCollection(abc.Sequence):
     
         # Adding padding
         y_lengths = [len(lst) for lst in y]
-        y_padded = add_label_padding(labels = y, fixed_label_len = label_len, blank_id)
+        y_padded = add_label_padding(labels = y, fixed_label_len = label_len, blank_id=blank_id)
 
         return (x, y_padded, y_lengths)
     

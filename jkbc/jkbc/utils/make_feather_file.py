@@ -3,10 +3,10 @@ from pathlib import Path
 
 import numpy as np
 
-import jkbc.utils.preprocessing as prep
-import jkbc.utils.files as f
 import jkbc.types as t
 import jkbc.utils.constants as constants
+import jkbc.utils.files as f
+import jkbc.utils.preprocessing as prep
 
 
 # DEFAULT PARAMETERS
