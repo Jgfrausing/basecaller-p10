@@ -52,8 +52,10 @@ def assemble(reads: t.List[str], window_size: int, stride: int, alphabet: t.Dict
 
     assembled_with_probabilities: t.List[t.List[float]] = chiron.simple_assembly(
         reads, jump_step_ratio)
+    
     assembled_as_numbers: np.ndarray[int] = np.argmax(
-        assembled_with_probabilities, axis=0)
+        assembled_with_probabilities, axis=0)+1 ## +1 to match A to 1
+    
     assembled: str = __concat_str([alphabet[x] for x in assembled_as_numbers])
 
     return assembled
@@ -84,9 +86,9 @@ def decode(predictions: t.Tensor3D, alphabet: str, beam_size: int = 25, threshol
     assert beam_size > 0 and isinstance(beam_size, int), 'Beam size must be a non-zero positive integer'
     
     # Todo: test what works best
-    predictions = normalise_last_dim(predictions)
+    #predictions = normalise_last_dim(predictions)
     #predictions = normalise_last_dim(torch.nn.LogSoftmax(dim=2)(predictions))
-    #predictions = torch.nn.Softmax(dim=2)(predictions)
+    predictions = torch.nn.Softmax(dim=2)(predictions)
     
     # apply beam search on each window
     decoded: t.List[str] = [beam_search(window.astype(np.float32), alphabet, beam_size, threshold)[0]

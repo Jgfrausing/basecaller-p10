@@ -120,7 +120,7 @@ class SignalCollection(abc.Sequence):
     """
 
     def __init__(self, filename: t.PathLike, max_labels_per_window: int = 70, min_labels_per_window: int = 5,
-                 window_size: int = 300, stride: int = 5):
+                 window_size: int = 300, stride: int = 5, training_data=True):
 
         self.filename = filename
         self.min_labels_per_window = min_labels_per_window
@@ -128,6 +128,7 @@ class SignalCollection(abc.Sequence):
         self.pos = 0
         self.window_size = window_size
         self.stride = stride
+        self.training_data = training_data
         with h5py.File(filename, 'r') as h5file:
             self.read_idx = list(h5file['Reads'].keys())
 
@@ -154,23 +155,24 @@ class SignalCollection(abc.Sequence):
 
             # Get labels for current window
             labels = []
-            for index_base in range(index_base_start, num_of_bases):
-                base_location = ref_to_signal[index_base]
-                if base_location < window_signal_start:
-                    # Update index_base such that we don't need to interate over previous bases on next iteration
-                    index_base_start = index_base + 1
-                elif base_location >= window_signal_end:
-                    # base_location is beyond the current window
-                    break
-                else:
-                    # Base is in the window so we add it to labels
-                    # One is added to avoid As and BLANKs (index 0) clashing in CTC
-                    labels.append(reference[index_base]+1)
+            if self.training_data:
+                for index_base in range(index_base_start, num_of_bases):
+                    base_location = ref_to_signal[index_base]
+                    if base_location < window_signal_start:
+                        # Update index_base such that we don't need to interate over previous bases on next iteration
+                        index_base_start = index_base + 1
+                    elif base_location >= window_signal_end:
+                        # base_location is beyond the current window
+                        break
+                    else:
+                        # Base is in the window so we add it to labels
+                        # One is added to avoid As and BLANKs (index 0) clashing in CTC
+                        labels.append(reference[index_base]+1)
 
-            # Discard windows with very few corresponding labels
-            if len(labels) < self.min_labels_per_window: continue
-            # And windows exeeding the maximum
-            elif len(labels) > self.max_labels_per_window: continue
+                # Discard windows with very few corresponding labels
+                if len(labels) < self.min_labels_per_window: continue
+                # And windows exeeding the maximum
+                elif len(labels) > self.max_labels_per_window: continue
             x.append(window_signal)
             y.append(labels)
             
@@ -203,17 +205,6 @@ class SignalCollection(abc.Sequence):
 
         for pos in range(len(self)):
             yield self[pos]
-    '''
-    def __iter__(self):
-        """Initiates the iterator"""
-        self.pos = 0
-        return self
-
-    def __next__(self):
-        """Receives next piece of data from the file."""
-        return self.generator()
-
-    '''
 
     def __len__(self):
         return len(self.read_idx)
