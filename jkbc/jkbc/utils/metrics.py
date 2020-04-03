@@ -50,14 +50,16 @@ class KdLoss(Loss):
         self.label_loss = label_loss.loss()
 
     def loss(self) -> functools.partial:
-        def __combined(self, y_pred_b: t.Tensor, y_b: t.Tensor, y_lengths: t.List[int], y_teacher: t.Tensor3D) -> float:
-            
-            label_loss = self.label_loss.loss(self.log_softmax(y_pred_b), y_b, y_lengths)
+        def __combined(self, y_pred_b: t.Tensor, y_b: t.Tensor, y_lengths: t.List[int]) -> float:
+        #def __combined(self, y_pred_b: t.Tensor, y_b: t.Tensor, y_lengths: t.List[int], y_teacher: t.Tensor3D) -> float:
+            y_teacher=None
+            print(y_lengths)
+            label_loss = self.label_loss(self.log_softmax(y_pred_b), y_b, y_lengths)
             teacher = self.__knowledge_distillation_loss(y_pred_b, y_teacher)
             
             return self.label_weight*label+self.teacher_weight*teacher
         
-        return partial(self.__combined, self)
+        return partial(__combined, self)
     
     def __knowledge_distillation_loss(self, y_pred_b: t.Tensor, y_teacher: t.Tensor3D) -> float:
         soft_teacher = self.softmax(y_teacher/self.temperature)

@@ -44,25 +44,29 @@ class SizedTensorDataset(t.TensorDataset):
     Arguments:
         *tensors (Tensor): tensors that have the same size of the first dimension.
     """
-
     def __init__(self, *tensors):
-        assert (len(tensors) == 3)
         assert all(tensors[0].size(0) == tensor.size(0) for tensor in tensors)
         self.tensors = tensors
-
+        self.has_teacher = len(tensors) == 4
+        print(len(tensors))
+        
     def __getitem__(self, index):
         x = self.tensors[0][index]
         y = self.tensors[1][index]
         y_lengths = self.tensors[2][index]
-        res = (x, (y, y_lengths))
-
-        return res
+        
+        if self.has_teacher:
+            y_tuple = (y, y_lengths, self.tensors[3][index])
+        else:
+            y_tuple = (y, y_lengths) 
+        
+        return (x, y_tuple)
 
     def __len__(self):
         return self.tensors[0].size(0)
 
 
-def convert_to_dataloaders(data: t.Tuple[np.ndarray, np.ndarray, list], split: float, batch_size: int, drop_last: bool = False) -> t.Tuple[t.DataLoader, t.DataLoader]:
+def convert_to_dataloaders(data: t.DataCollection, split: float, batch_size: int, drop_last: bool = False) -> t.Tuple[t.DataLoader, t.DataLoader]:
     """
     Converts a data object into test/validate TensorDatasets
 
@@ -71,7 +75,14 @@ def convert_to_dataloaders(data: t.Tuple[np.ndarray, np.ndarray, list], split: f
         data = DataBunch.create(train, valid, bs=64)
     """
     # Unpack
-    x, y, y_lengths = data
+    if len(data) == 3:
+        x, y, y_lengths = data
+        has_teacher = False
+    elif len(data) == 4:
+        x, y, y_lengths, y_teacher = data
+        has_teacher = True
+    else: raise Exception('Incorrect number of values in data')
+        
     y_lengths_count = len(y_lengths)
     window_size = x.shape[1]
         
@@ -93,9 +104,16 @@ def convert_to_dataloaders(data: t.Tuple[np.ndarray, np.ndarray, list], split: f
     y_valid_lengths = y_lengths[split_valid:,:]
 
     # Create TensorDataset
-    train_ds = SizedTensorDataset(x_train_t, y_train_t, y_train_lengths)
-    valid_ds = SizedTensorDataset(x_valid_t, y_valid_t, y_valid_lengths)
-    
+    if not has_teacher:
+        train_ds = SizedTensorDataset(x_train_t, y_train_t, y_train_lengths)
+        valid_ds = SizedTensorDataset(x_valid_t, y_valid_t, y_valid_lengths)
+    else: ## ERROR STARTS SOMEWHERE HERE!
+        y_train_teacher = y_teacher[:split_train]
+        y_valid_teacher = y_teacher[split_valid:]
+        
+        train_ds = SizedTensorDataset(x_train_t, y_train_t, y_train_lengths, y_train_teacher)
+        valid_ds = SizedTensorDataset(x_valid_t, y_valid_t, y_valid_lengths, y_valid_teacher)
+        
     # Create DataLoader
     train_dl = t.DataLoader(train_ds, batch_size=batch_size, drop_last=drop_last)
     valid_dl = t.DataLoader(valid_ds, batch_size=batch_size, drop_last=drop_last)
