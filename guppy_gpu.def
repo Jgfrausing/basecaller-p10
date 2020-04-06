@@ -1,0 +1,18 @@
+BootStrap: docker
+From: ubuntu:xenial
+
+
+%environment
+    export LANG=en_US.UTF-8
+
+%post
+    LANG=en_US.UTF-8
+    echo $LANG UTF-8 > /etc/local.gen
+    apt-get -y update
+    apt-get install -y locales && update-local --reset LANG=$LANG
+
+    apt-get install -y python wget curl unzip lsb-release apt-transport-https ca-certificates vim
+    wget -O- https://mirror.oxfordnanoportal.com/apt/ont-repo.pub | apt-key add -
+    echo "deb http://mirror.oxfordnanoportal.com/apt xenial-stable non-free" > /etc/apt/sources.list.d/nanoporetech.sources.list
+    apt-get -y update
+    apt-get install -y ont-guppy 

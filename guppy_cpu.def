@@ -1,0 +1,10 @@
+BootStrap: docker
+From: ubuntu:xenial
+
+%post
+    apt-get -y update
+    apt-get install -y python wget curl unzip lsb-release apt-transport-https ca-certificates vim
+    wget -O- https://mirror.oxfordnanoportal.com/apt/ont-repo.pub | apt-key add -
+    echo "deb http://mirror.oxfordnanoportal.com/apt xenial-stable non-free" > /etc/apt/sources.list.d/nanoporetech.sources.list
+    apt-get -y update
+    apt-get install -y ont-guppy-cpu 
