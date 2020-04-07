@@ -16,17 +16,17 @@ class Loss():
 class CtcLoss(Loss):
     '''CTC loss'''
     def __init__(self, window_size: int, prediction_size, batch_size: int, alphabet_size:int):
-        self.input_to_output_scale = prediction_size/window_size
+        self.input_to_output_scale = 3 # prediction_size/window_size
         self.batch_size = batch_size
         self.alphabet_size = alphabet_size
         self.log_softmax = nn.LogSoftmax(dim=2)
     
     def loss(self) -> functools.partial:
         def __ctc_loss(alphabet_size: int, pred: torch.Tensor, labels: torch.Tensor, pred_lengths, label_lengths) -> float:
-            pred = pred.contiguous().view((pred.shape[1], pred.shape[0], alphabet_size))
+            #pred = pred.contiguous().view((pred.shape[1], pred.shape[0], alphabet_size))
             
-            pred_lengths = (pred_lengths*self.input_to_output_scale)
-            return nn.CTCLoss()(self.log_softmax(pred), labels, pred_lengths.int(), label_lengths)
+            pred_lengths = pred_lengths/self.input_to_output_scale
+            return nn.CTCLoss()(self.log_softmax(pred).transpose(1,0), labels, pred_lengths, label_lengths)
         return partial(__ctc_loss, self.alphabet_size)
 
 class KdLoss(Loss):

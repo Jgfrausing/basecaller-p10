@@ -68,7 +68,7 @@ class SizedTensorDataset(t.TensorDataset):
         return self.tensors[0].size(0)
 
 
-def convert_to_dataloaders(data: ReadObject, split: float, batch_size: int, teacher:t.Tensor=None, drop_last: bool = False) -> t.Tuple[t.DataLoader, t.DataLoader]:
+def convert_to_dataloaders(data: ReadObject, split: float, batch_size: int, teacher:t.Tensor=None, drop_last: bool = False, windows:int=None) -> t.Tuple[t.DataLoader, t.DataLoader]:
     """
     Converts a data object into test/validate TensorDatasets
 
@@ -76,20 +76,26 @@ def convert_to_dataloaders(data: ReadObject, split: float, batch_size: int, teac
         train, valid = convert_to_datasets((x, y_padded), split=0.8)
         data = DataBunch.create(train, valid, bs=64)
     """
+    if not windows:
+        windows = len(data.x)
     
-    windows = len(data.x)
-    window_size = len(data.x[0])
+    x = data.x[:windows]
+    x_lengths = data.x_lengths[:windows]
+    y = data.y[:windows]
+    y_lengths = data.y_lengths[:windows]
     
+    window_size = len(x[0])
+        
     # Turn it into tensors
-    x = torch.as_tensor(data.x, dtype = torch.float).view(windows, 1, window_size)
-    x_lengths = torch.as_tensor(data.x_lengths, dtype = torch.long).view(windows, 1)
+    x = torch.as_tensor(x, dtype = torch.float).view(windows, 1, window_size)
+    x_lengths = torch.as_tensor(x_lengths, dtype = torch.long).view(windows, 1)
     
-    y = torch.as_tensor(data.y, dtype = torch.long)
-    y_lengths = torch.as_tensor(data.y_lengths, dtype = torch.long).view(windows, 1)
+    y = torch.as_tensor(y, dtype = torch.long)
+    y_lengths = torch.as_tensor(y_lengths, dtype = torch.long).view(windows, 1)
     
     # Get split
     split_train = int(windows*split)
-    split_valid = split_train-window_size
+    split_valid = split_train+window_size
 
     # Split into test/valid sets
     x_train_t = x[:split_train]
