@@ -5,6 +5,7 @@ import jkbc.utils.postprocessing as pop
 import jkbc.utils.preprocessing as prep
 import jkbc.types as t
 
+import numpy as np
 from fastai.callbacks.tracker import SaveModelCallback
 
 class Loss():
@@ -85,7 +86,7 @@ class ErrorRate(Callback):
         return add_metrics(last_metrics, self.val/self.count)
 
 
-def ctc_error(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0, batch_slice:int = 5) -> functools.partial:
+def ctc_accuracy(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0, batch_slice:int = 5) -> functools.partial:
     """CTC accuracy function to use with ErrorRate.
 
     Args:
@@ -96,10 +97,13 @@ def ctc_error(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0, b
     Returns:
         Average Rates.error for the considered windows
     """
-    def ctc_error(alphabet_val, alphabet_str, beam_size, threshold, batch_slice, last_output, last_target, **kwargs):
+    def ctc_accuracy(alphabet_val, alphabet_str, beam_size, threshold, batch_slice, last_output, last_target, **kwargs):
         # last_target is a tuple (input_lengths, labels, label_lengths (and y_teacher for KD))
-        inp
         labels = last_target[1]
+        print(last_target[0][0])
+        #print(np.ndim(labels))
+        #print(np.ndim(last_target[2]))
+        
         # Reducing the amount of windows considered
         batch_slice = min(len(last_output), batch_slice)
         x = last_output[:batch_slice].detach()
@@ -119,7 +123,7 @@ def ctc_error(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0, b
     
     alphabet_val = list(alphabet.values())
     alphabet_str = ''.join(alphabet_val)
-    return partial(ctc_error, alphabet_val, alphabet_str, beam_size, threshold, batch_slice)
+    return partial(ctc_accuracy, alphabet_val, alphabet_str, beam_size, threshold, batch_slice)
 # -
 
 
