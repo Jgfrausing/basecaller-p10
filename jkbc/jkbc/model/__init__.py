@@ -42,4 +42,4 @@ def load_model_weights(learner, model_name):
 
 
 def signal_to_input_tensor(signal, device):
-        return torch.tensor(signal)[:,None].to(device=device)
+        return signal.view(signal.shape[0],1,signal.shape[1]).to(device=device)

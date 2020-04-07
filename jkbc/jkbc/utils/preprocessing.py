@@ -140,9 +140,11 @@ class SignalCollection(abc.Sequence):
         training_data: to include y values or not
     """
 
-    def __init__(self, filename: t.PathLike, labels_per_window: t.Tuple[int, int], 
-                 window_size: t.Tuple[int, int], blank_id: int, stride: int = 5, training_data=True):
+    def __init__(self, filename: t.PathLike, window_size: t.Tuple[int, int], blank_id: int, 
+                 stride: int = 5, labels_per_window: t.Tuple[int, int] = None, training_data=True):
 
+        assert not training_data or labels_per_window != None, "labels_per_window must be set to create training data"
+        
         self.filename = filename
         self.labels_per_window = labels_per_window
         self.window_size = window_size
@@ -210,7 +212,8 @@ class SignalCollection(abc.Sequence):
             window_signal = add_padding(window_signal, self.window_size[1], 0)
             
             # Padding labels with blank_id
-            labels = add_padding(labels, self.labels_per_window[1], self.blank_id)
+            if self.training_data:
+                labels = add_padding(labels, self.labels_per_window[1], self.blank_id)
             
             # Append to signals and labels
             x.append(window_signal)
