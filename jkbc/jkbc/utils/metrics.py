@@ -98,11 +98,8 @@ def ctc_accuracy(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0
         Average Rates.error for the considered windows
     """
     def ctc_accuracy(alphabet_val, alphabet_str, beam_size, threshold, batch_slice, last_output, last_target, **kwargs):
-        # last_target is a tuple (input_lengths, labels, label_lengths (and y_teacher for KD))
-        labels = last_target[1]
-        print(last_target[0][0])
-        #print(np.ndim(labels))
-        #print(np.ndim(last_target[2]))
+        # last_target is a tuple of (y, x_lengths, y_lengths, and maybe a teacher))
+        labels = last_target[0]
         
         # Reducing the amount of windows considered
         batch_slice = min(len(last_output), batch_slice)
@@ -123,7 +120,7 @@ def ctc_accuracy(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0
     
     alphabet_val = list(alphabet.values())
     alphabet_str = ''.join(alphabet_val)
-    return partial(ctc_accuracy, alphabet_val, alphabet_str, beam_size, threshold, batch_slice)
+    return ErrorRate(partial(ctc_accuracy, alphabet_val, alphabet_str, beam_size, threshold, batch_slice))
 # -
 
 

@@ -29,7 +29,7 @@ class ReadObject:
     def __init__(self, read_id, x: t.Tensor2D, x_lengths: t.List[int], y: t.Tensor2D, y_lengths: t.List[int], reference: t.Tensor1D):
         assert len(x) == len(x_lengths), "Dimensions of input parameters does not fit"
         assert len(y) == len(y_lengths), "Dimensions of output parameters does not fit"
-        assert len(y) != 0 and len(y) == len(x), 'y contains elements (e.g. training data is included) but is not same size as x'
+        assert len(y) == 0 or len(y) == len(x), 'y contains elements (e.g. training data is included) but is not same size as x'
         self.id = read_id 
         self.x = x
         self.x_lengths = x_lengths
@@ -168,7 +168,7 @@ class SignalCollection(abc.Sequence):
         
         num_of_bases = len(reference)
         index_base_start = 0
-        #last_start_signal = ref_to_signal[-1] - self.window_size
+        
         for window_signal_start in range(ref_to_signal[0], ref_to_signal[-1], self.stride):
             # Get a window of the signal
             window_signal_end = window_signal_start + np.random.randint(self.window_size[0], self.window_size[1])
