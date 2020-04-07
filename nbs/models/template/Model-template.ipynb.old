@@ -100,9 +100,15 @@
    "source": [
     "DIMENSIONS_PREDICTION_OUT = DIMENSIONS_OUT*2-1\n",
     "DROP_LAST    = True # SET TO TRUE IF IT FAILS ON LAST BATCH\n",
+<<<<<<< Updated upstream:nbs/models/template/Model-template.ipynb.old
     "LOSS_FUNC = metric.CtcLoss(DIMENSIONS_PREDICTION_OUT, BS, ALPHABET_SIZE).loss()\n",
     "METRICS = [metric.ErrorRate(metric.ctc_error(ALPHABET, 5))]\n",
     "SAVE_CALLBACK = partial(metric.SaveModelCallback, every='epoch', monitor='valid_loss')"
+=======
+    "LOSS_FUNC = metric.ctc_loss(DIMENSIONS_PREDICTION_OUT, BS, ALPHABET_SIZE)\n",
+    "METRICS = [metric.ErrorRate(metric.ctc_error(ALPHABET, 5))]\n",
+    "SAVE_CALLBACK = partial(SaveModelCallback, every='epoch', monitor='valid_loss')"
+>>>>>>> Stashed changes:model-nbk/template/Model-template.ipynb
    ]
   },
   {
