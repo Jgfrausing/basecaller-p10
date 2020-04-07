@@ -26,14 +26,16 @@ class ReadObject:
         reference: the full genome reference
     """
 
-    def __init__(self, read_id, x: t.Tensor2D, y: t.Tensor2D, reference: t.Tensor1D):
+    def __init__(self, read_id, x: t.Tensor2D, x_lengths: t.List[int], y: t.Tensor2D, y_lengths: t.List[int], reference: t.Tensor1D):
+        assert len(x) == len(x_lengths), "Dimensions of input parameters does not fit"
+        assert len(y) == len(y_lengths), "Dimensions of output parameters does not fit"
+        assert len(y) != 0 and len(y) == len(x), 'y contains elements (e.g. training data is included) but is not same size as x'
         self.id = read_id 
         self.x = x
+        self.x_lengths = x_lengths
         self.y = y
+        self.y_lengths = y_lengths
         self.reference = reference
-        
-    def x_for_prediction(self, device):
-        return torch.tensor(self.x)[:,None].to(device=device)
 
 class SizedTensorDataset(t.TensorDataset):
     r"""Dataset wrapping tensors.
@@ -45,28 +47,28 @@ class SizedTensorDataset(t.TensorDataset):
         *tensors (Tensor): tensors that have the same size of the first dimension.
     """
     def __init__(self, *tensors):
-        assert all(tensors[0].size(0) == tensor.size(0) for tensor in tensors)
+        assert all(tensors[0].size(0) == tensor.size(0) for tensor in tensors), "All tensors does not have same size"
         self.tensors = tensors
-        self.has_teacher = len(tensors) == 4
-        print(len(tensors))
-        
+        self.has_teacher = len(tensors) == 5
+                
     def __getitem__(self, index):
         x = self.tensors[0][index]
-        y = self.tensors[1][index]
-        y_lengths = self.tensors[2][index]
+        x_lengths = self.tensors[1][index]
+        y = self.tensors[2][index]
+        y_lengths = self.tensors[3][index]
         
         if self.has_teacher:
-            y_tuple = (y, y_lengths, self.tensors[3][index])
+            second = (y, x_lengths, y_lengths, self.tensors[4][index])
         else:
-            y_tuple = (y, y_lengths) 
+            second = (y, x_lengths, y_lengths) 
         
-        return (x, y_tuple)
+        return (x, second)
 
     def __len__(self):
         return self.tensors[0].size(0)
 
 
-def convert_to_dataloaders(data: t.DataCollection, split: float, batch_size: int, drop_last: bool = False) -> t.Tuple[t.DataLoader, t.DataLoader]:
+def convert_to_dataloaders(data: ReadObject, split: float, batch_size: int, teacher:t.Tensor=None, drop_last: bool = False) -> t.Tuple[t.DataLoader, t.DataLoader]:
     """
     Converts a data object into test/validate TensorDatasets
 
@@ -74,45 +76,42 @@ def convert_to_dataloaders(data: t.DataCollection, split: float, batch_size: int
         train, valid = convert_to_datasets((x, y_padded), split=0.8)
         data = DataBunch.create(train, valid, bs=64)
     """
-    # Unpack
-    if len(data) == 3:
-        x, y, y_lengths = data
-        has_teacher = False
-    elif len(data) == 4:
-        x, y, y_lengths, y_teacher = data
-        has_teacher = True
-    else: raise Exception('Incorrect number of values in data')
-        
-    y_lengths_count = len(y_lengths)
-    window_size = x.shape[1]
-        
+    
+    windows = len(data.x)
+    window_size = len(data.x[0])
+    
     # Turn it into tensors
-    x = torch.as_tensor(x.reshape(x.shape[0], 1, x.shape[1]), dtype = torch.float)
-    y = torch.as_tensor(y, dtype = torch.long)
-    y_lengths = torch.as_tensor(y_lengths, dtype = torch.long).view(y_lengths_count, 1)
+    x = torch.as_tensor(data.x, dtype = torch.float).view(windows, 1, window_size)
+    x_lengths = torch.as_tensor(data.x_lengths, dtype = torch.long).view(windows, 1)
+    
+    y = torch.as_tensor(data.y, dtype = torch.long)
+    y_lengths = torch.as_tensor(data.y_lengths, dtype = torch.long).view(windows, 1)
     
     # Get split
-    split_train = int(len(x)*split)
+    split_train = int(windows*split)
     split_valid = split_train-window_size
 
     # Split into test/valid sets
     x_train_t = x[:split_train]
+    x_train_lengths = x_lengths[:split_train]
     y_train_t = y[:split_train]
     y_train_lengths = y_lengths[:split_train]
+    
     x_valid_t = x[split_valid:]
+    x_valid_lengths = x_lengths[split_valid:,:]
     y_valid_t = y[split_valid:]
     y_valid_lengths = y_lengths[split_valid:,:]
 
     # Create TensorDataset
-    if not has_teacher:
-        train_ds = SizedTensorDataset(x_train_t, y_train_t, y_train_lengths)
-        valid_ds = SizedTensorDataset(x_valid_t, y_valid_t, y_valid_lengths)
+    if not teacher:
+        train_ds = SizedTensorDataset(x_train_t, x_train_lengths, y_train_t, y_train_lengths)
+        valid_ds = SizedTensorDataset(x_valid_t, x_valid_lengths, y_valid_t, y_valid_lengths)
     else: ## ERROR STARTS SOMEWHERE HERE!
         y_train_teacher = y_teacher[:split_train]
         y_valid_teacher = y_teacher[split_valid:]
         
-        train_ds = SizedTensorDataset(x_train_t, y_train_t, y_train_lengths, y_train_teacher)
-        valid_ds = SizedTensorDataset(x_valid_t, y_valid_t, y_valid_lengths, y_valid_teacher)
+        train_ds = SizedTensorDataset(x_train_t, x_train_lengths, y_train_t, y_train_lengths, y_train_teacher)
+        valid_ds = SizedTensorDataset(x_valid_t, x_valid_lengths, y_valid_t, y_valid_lengths, y_valid_teacher)
         
     # Create DataLoader
     train_dl = t.DataLoader(train_ds, batch_size=batch_size, drop_last=drop_last)
@@ -135,21 +134,22 @@ class SignalCollection(abc.Sequence):
 
     Args:
         filename: The path to the HDF5 file
-        min_labels_per_window: lower limit for when to discard a window
-        window_size: the window size
+        labels_per_window: tuple of lower and upper limit for when to discard a window
+        window_size: tuple of lower and upper limit of the window size
         stride: how much the moving window moves at a time
+        training_data: to include y values or not
     """
 
-    def __init__(self, filename: t.PathLike, max_labels_per_window: int = 70, min_labels_per_window: int = 5,
-                 window_size: int = 300, stride: int = 5, training_data=True):
+    def __init__(self, filename: t.PathLike, labels_per_window: t.Tuple[int, int], 
+                 window_size: t.Tuple[int, int], blank_id: int, stride: int = 5, training_data=True):
 
         self.filename = filename
-        self.min_labels_per_window = min_labels_per_window
-        self.max_labels_per_window = max_labels_per_window
-        self.pos = 0
+        self.labels_per_window = labels_per_window
         self.window_size = window_size
+        self.blank_id = blank_id
         self.stride = stride
         self.training_data = training_data
+        
         with h5py.File(filename, 'r') as h5file:
             self.read_idx = list(h5file['Reads'].keys())
 
@@ -157,7 +157,8 @@ class SignalCollection(abc.Sequence):
         """
         Returns signal_windows, label_windows, and a reference for a single signal.
         """
-        x, y = [], []
+        x, x_lengths = [], []
+        y, y_lengths = [], []
 
         read_id = self.read_idx[read_id_index]
 
@@ -167,12 +168,19 @@ class SignalCollection(abc.Sequence):
         
         num_of_bases = len(reference)
         index_base_start = 0
-        last_start_signal = ref_to_signal[-1] - self.window_size
-        for window_signal_start in range(ref_to_signal[0], last_start_signal, self.stride):
+        #last_start_signal = ref_to_signal[-1] - self.window_size
+        for window_signal_start in range(ref_to_signal[0], ref_to_signal[-1], self.stride):
             # Get a window of the signal
-            window_signal_end = window_signal_start + self.window_size
+            window_signal_end = window_signal_start + np.random.randint(self.window_size[0], self.window_size[1])
+            window_signal_end = min(window_signal_end, ref_to_signal[-1])
+            
             window_signal = signal[window_signal_start:window_signal_end]
-
+            # Continue if window is too small
+            if len(window_signal) < self.window_size[0]:
+                continue
+            if len(window_signal) > self.window_size[1]:
+                continue
+                        
             # Get labels for current window
             labels = []
             if self.training_data:
@@ -190,37 +198,53 @@ class SignalCollection(abc.Sequence):
                         labels.append(reference[index_base]+1)
 
                 # Discard windows with very few corresponding labels
-                if len(labels) < self.min_labels_per_window: continue
+                if len(labels) < self.labels_per_window[0]: continue
                 # And windows exeeding the maximum
-                elif len(labels) > self.max_labels_per_window: continue
+                elif len(labels) > self.labels_per_window[1]: continue
+            
+            # Get lengths for signals and labels before padding
+            x_lengths.append(len(window_signal))
+            y_lengths.append(len(labels))
+            
+            # Padding input with zeros
+            window_signal = add_padding(window_signal, self.window_size[1], 0)
+            
+            # Padding labels with blank_id
+            labels = add_padding(labels, self.labels_per_window[1], self.blank_id)
+            
+            # Append to signals and labels
             x.append(window_signal)
             y.append(labels)
-            
-        return ReadObject(read_id, x, y, reference)
+        
+        return ReadObject(read_id, x, x_lengths, y, y_lengths, reference)
 
-    def get_range(self, ran: t.List[int], label_len: int, blank_id:int)-> t.Tuple[np.ndarray, np.ndarray, list]:
-        x = None
-        y = None
+    
+    def get_range(self, ran: t.List[int])-> t.Tuple[np.ndarray, np.ndarray, list]:
+        x, x_lengths = None, None
+        y, y_lengths = None, None
+        
         for i in tqdm(ran):
             # Getting data
             data = self[i]
-            data_fields = np.array(data.x), np.array(data.y), data.reference
-            _x, _y, _ = data_fields # we don't use the full reference while training
+            _x, _x_lengths, _y, _y_lengths = data.x, data.x_lengths, data.y, data.y_lengths
             
             # Concating into a single collection
-            x = _x if x is None else np.concatenate((x, _x))
-            y = _y if y is None else np.concatenate((y, _y))
+            if x is None:
+                x, x_lengths = _x, _x_lengths
+                y, y_lengths = _y, _y_lengths
+            else:
+                x += _x
+                x_lengths += _x_lengths
+                y += _y
+                y_lengths += _y_lengths
+                        
+        assert len(x) == len(y) == len(x_lengths) == len(y_lengths), "Dimensions does not match for training data"
+        return ReadObject(None, x, x_lengths, y, y_lengths, None)
     
-        # Adding padding
-        y_lengths = [len(lst) for lst in y]
-        y_padded = add_label_padding(labels = y, fixed_label_len = label_len, blank_id=blank_id)
-
-        return (x, y_padded, y_lengths)
-    
-    def generator(self):
+    def generator(self) -> ReadObject:
         """Get the next piece of data.
         Returns:
-            training_dict, (test_signal, test_labels)
+            ReadObject
         """
 
         for pos in range(len(self)):
@@ -230,18 +254,9 @@ class SignalCollection(abc.Sequence):
         return len(self.read_idx)
 
 
-def add_label_padding(labels: t.Tensor2D, fixed_label_len: int, blank_id: int) -> t.Tensor2D:
-    """Pads each label with padding_val
-
-    Example:
-        add_label_padding([[1, 1, 2], [3, 4]], fixed_label_len=5, padding_val=0)
-        => [[2, 2, 3, 0, 0], [3, 4, 0, 0, 0]]    
-        
-    Attention:
-        will cap label lengths exceding fixed_label_len
-    """
-    
-    return np.array([l + [blank_id] * (fixed_label_len - len(l)) for l in labels], dtype='float32')
+def add_padding(lst: t.List[int], length: int, padding_id: int) -> t.List[int]:
+    assert len(lst) <= length, f"Cannot pad lst longer than given length {len(lst), length}"
+    return np.append(lst, [padding_id] * (length - len(lst)))
 
 
 def _normalize(dac, dmin: float = 0, dmax: float = 850):

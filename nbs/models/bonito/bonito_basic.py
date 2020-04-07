@@ -7,8 +7,8 @@ DIMENSIONS_OUT = 100
 
 
 def model(device, dimension_in, dimension_out):
-    assert dimension_in == WINDOW_SIZE
-    assert dimension_out == DIMENSIONS_OUT
+    #assert dimension_in == WINDOW_SIZE
+    #assert dimension_out == DIMENSIONS_OUT
     config = toml.load("quartznet5x5.toml")
     model = Model(config).to(device=device)
     return model, MODEL_NAME

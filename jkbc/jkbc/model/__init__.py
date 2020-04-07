@@ -1,7 +1,12 @@
+# +
+import torch
+
 import jkbc.types as t
 import jkbc.utils.general as g
 import jkbc.utils.postprocessing as pop
 
+
+# -
 
 def predict(learner, x: t.Tensor, alphabet: t.Dict[int, str], window_size, stride, reference: str=None, beam_size = 25, beam_threshold=0.1) -> t.Tuple[str, t.Tuple[float, str]]:
     alphabet_values = list(alphabet.values())
@@ -34,3 +39,7 @@ def load_model_weights(learner, model_name):
         print('Model weights loaded', model_name)
     except:
         print('No model weights available')
+
+
+def signal_to_input_tensor(signal, device):
+        return torch.tensor(signal)[:,None].to(device=device)

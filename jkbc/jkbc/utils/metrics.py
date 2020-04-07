@@ -14,25 +14,19 @@ class Loss():
 
 class CtcLoss(Loss):
     '''CTC loss'''
-    def __init__(self, prediction_size: int, batch_size: int, alphabet_size:int):
-        self.prediction_size = prediction_size
+    def __init__(self, window_size: int, prediction_size, batch_size: int, alphabet_size:int):
+        self.input_to_output_scale = prediction_size/window_size
         self.batch_size = batch_size
         self.alphabet_size = alphabet_size
         self.log_softmax = nn.LogSoftmax(dim=2)
     
     def loss(self) -> functools.partial:
-        def __ctc_loss(y_pred_lengths, alphabet_size, y_pred_b: torch.Tensor, y_b: torch.Tensor, y_lengths) -> float:
-            if y_pred_lengths.shape[0] != y_pred_b.shape[0]:
-                new_len = y_pred_b.shape[0]
-                y_pred_lengths_ = y_pred_lengths[:new_len]
-            else:
-                y_pred_lengths_ = y_pred_lengths
-
-            y_pred_b_ = y_pred_b.contiguous().view((y_pred_b.shape[1], y_pred_b.shape[0], alphabet_size))
-
-            return nn.CTCLoss()(self.log_softmax(y_pred_b_), y_b, y_pred_lengths_, y_lengths)
-        return partial(__ctc_loss, prep.get_prediction_lengths(self.prediction_size, self.batch_size), self.alphabet_size)
-
+        def __ctc_loss(alphabet_size: int, pred: torch.Tensor, labels: torch.Tensor, pred_lengths, label_lengths) -> float:
+            pred = pred.contiguous().view((pred.shape[1], pred.shape[0], alphabet_size))
+            
+            pred_lengths = (pred_lengths*self.input_to_output_scale)
+            return nn.CTCLoss()(self.log_softmax(pred), labels, pred_lengths.int(), label_lengths)
+        return partial(__ctc_loss, self.alphabet_size)
 
 class KdLoss(Loss):
     '''Konwledge distillation loss'''
@@ -103,8 +97,9 @@ def ctc_error(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0, b
         Average Rates.error for the considered windows
     """
     def ctc_error(alphabet_val, alphabet_str, beam_size, threshold, batch_slice, last_output, last_target, **kwargs):
-        # last_target is a tuple (labels, label_lengths (and y_teacher for KD))
-        labels = last_target[0]
+        # last_target is a tuple (input_lengths, labels, label_lengths (and y_teacher for KD))
+        inp
+        labels = last_target[1]
         # Reducing the amount of windows considered
         batch_slice = min(len(last_output), batch_slice)
         x = last_output[:batch_slice].detach()
