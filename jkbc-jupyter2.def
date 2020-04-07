@@ -1,0 +1,26 @@
+BootStrap: docker
+From: nvcr.io/nvidia/pytorch:20.02-py3
+
+%post
+
+    apt -y update && apt install -y zsh tmux
+    
+    PATH=$PATH:/opt/conda/bin
+
+    conda update -y -n base --all
+    conda install -y -c conda-forge \
+	nodejs \
+	jupyterlab \ 
+	xeus-python \
+   	ptvsd
+    pip install \
+	nbdev \
+	jupyter-lsp \
+	python-language-server[all]
+    jupyter labextension update --all
+    jupyter labextension install @aquirdturtle/collapsible_headings --no-build
+    jupyter labextension install @@krassowski/jupyterlab-lsp --no-build
+    jupyter labextension install @klwvam/jupyterlab_vim --no-build
+    jupyter labextension install @ijmbarr/jupyterlab_spellcheck --no-build
+    jupyter lab build 
+      	
