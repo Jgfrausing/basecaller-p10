@@ -1,4 +1,3 @@
-# +
 import torch
 
 import jkbc.types as t
@@ -6,50 +5,22 @@ import jkbc.utils.general as g
 import jkbc.utils.postprocessing as pop
 
 
-# -
-
-def predict(learner, x: t.Tensor, alphabet: t.Dict[int, str], window_size, stride, reference: str=None, beam_size = 25, beam_threshold=0.1) -> t.Tuple[str, t.Tuple[float, str]]:
-    alphabet_values = list(alphabet.values())
-    alphabet_str = ''.join(alphabet_values)
-
+def predict_and_assemble(model, x: t.Tensor, alphabet: str, window_size, stride, beam_size = 25, beam_threshold=0.1) -> t.Tuple[str, t.Tensor2D]:
     # Predict signals
-    pred = learner.model(x).detach().cpu()
+    pred = model(x).detach().cpu()
     # Decode into characters using beam search
-    decoded = pop.decode(pred, alphabet_str, beam_size=beam_size, threshold=beam_threshold)
+    decoded = pop.decode(pred, alphabet, beam_size=beam_size, threshold=beam_threshold)
     # Assemble most likely sequence
     assembled = pop.assemble(decoded, window_size, stride, alphabet)
     
-    # Return assembled, if no reference is available for comparison
-    if reference is None: 
-        return assembled, None
+    return assembled, decoded
     
+def get_accuracy(reference: t.List[int], predicted: t.List[str], alphabet_values: t.List[str]):
     # Convert reference (list[int]) to string
     actual = pop.convert_idx_to_base_sequence(reference, alphabet_values)
     # Get accuracy
-    accuracy, alignment = pop.calc_accuracy(actual, assembled, return_alignment=True)
-    return assembled, (accuracy, alignment)
+    return pop.calc_accuracy(actual, predicted, return_alignment=True)
 
-
-def predict_single(learner, x: t.Tensor, alphabet: t.Dict[int, str], reference: str=None, beam_size = 25, beam_threshold=0.1) -> t.Tuple[str, t.Tuple[float, str]]:
-    alphabet_values = list(alphabet.values())
-    alphabet_str = ''.join(alphabet_values)
-
-    # Predict signals
-    pred = learner.pred_batch(x).detach()
-    # Decode into characters using beam search
-    decoded = pop.decode(pred, alphabet_str, beam_size=beam_size, threshold=beam_threshold)
-    # Assemble most likely sequence
-    assembled = pop.assemble(decoded, window_size, stride, alphabet)
-    
-    # Return assembled, if no reference is available for comparison
-    if reference is None: 
-        return assembled, None
-    
-    # Convert reference (list[int]) to string
-    actual = pop.convert_idx_to_base_sequence(reference, alphabet_values)
-    # Get accuracy
-    accuracy, alignment = pop.calc_accuracy(actual, assembled, return_alignment=True)
-    return assembled, (accuracy, alignment)
 def load_model_weights(learner, model_name):
     try:
         if not model_name:
@@ -60,6 +31,6 @@ def load_model_weights(learner, model_name):
     except:
         print('No model weights available')
 
-
 def signal_to_input_tensor(signal, device):
-        return signal.view(signal.shape[0],1,signal.shape[1]).to(device=device)
+    x = torch.tensor(signal, dtype=torch.float32, device=device)
+    return x.view(x.shape[0],1,x.shape[1])
