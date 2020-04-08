@@ -94,19 +94,18 @@ def convert_to_dataloaders(data: ReadObject, split: float, batch_size: int, teac
     y_lengths = torch.as_tensor(y_lengths, dtype = torch.long).view(windows, 1)
     
     # Get split
-    split_train = int(windows*split)
-    split_valid = split_train+window_size
+    split = int(windows*split)
 
     # Split into test/valid sets
-    x_train_t = x[:split_train]
-    x_train_lengths = x_lengths[:split_train]
-    y_train_t = y[:split_train]
-    y_train_lengths = y_lengths[:split_train]
+    x_train_t = x[:split]
+    x_train_lengths = x_lengths[:split]
+    y_train_t = y[:split]
+    y_train_lengths = y_lengths[:split]
     
-    x_valid_t = x[split_valid:]
-    x_valid_lengths = x_lengths[split_valid:,:]
-    y_valid_t = y[split_valid:]
-    y_valid_lengths = y_lengths[split_valid:,:]
+    x_valid_t = x[split:]
+    x_valid_lengths = x_lengths[split:,:]
+    y_valid_t = y[split:]
+    y_valid_lengths = y_lengths[split:,:]
 
     # Create TensorDataset
     if not teacher:
