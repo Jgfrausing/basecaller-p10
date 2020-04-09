@@ -67,6 +67,14 @@ $ ssh <username>@ai-pilot.srv.aau.dk
    `http://nv-ai-<id>.srv.aau.dk:<port>/lab?token=<token>`
 8. Remember to choose the correct *kernel* for your notebooks (jkbc).
 
+### Keep jupyter running
+It is important, that you keep the tab open in order to be able to continue execution
+1. Detach from the tmux running jupyter: `Ctrl + b` + `d`
+2. Disconnect from the aau connection: `exit`
+3. Turn of VPN
+#### Reconnecting
+1. Log into VPN and ssh into aau
+2. Reconnect kernel by `Kernel` -> `Reconnect kernel`
 ---
 
 ## Conda Environment Files
@@ -108,34 +116,3 @@ We created a script that reads hdf5 files, and saves training data into feather 
     * Within the folder lies the files:
         - x (input data)
         - y (labels)
-
-### Load
-To load the data do the following:
-1. Import needed dependensies
-    ```python
-    from fastai.basics import *
-
-    import jkbc.utils.preprocessing as prep
-    import jkbc.utils.files as f
-    ```
-2. Setup path to folder
-    ```python
-    base_dir = "data/feather-files/"
-    path_data = Path(base_dir)
-    data_set_name = 'Range0-5-FixLabelLen70'
-    feather_folder = path_data/data_set_name
-    ```
-3. Read data and create databunch
-    ```python
-    # Read data from feather
-    data = f.read_data_from_feather_file(feather_folder)
-    x, y_train = data
-
-    # Convert to databunch
-    train, valid = prep.convert_to_datasets(data, split=.8)
-    databunch = DataBunch.create(train, valid, bs=BS)
-    ```
-
-```python
-
-```
