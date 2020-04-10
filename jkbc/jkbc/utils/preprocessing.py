@@ -234,9 +234,11 @@ class SignalCollection(abc.Sequence):
         
         for i in tqdm(ran):
             # Getting data
-            data = self[i]
-            _x, _x_lengths, _y, _y_lengths = data.x, data.x_lengths, data.y, data.y_lengths
-            
+            try:
+                data = self[i]
+                _x, _x_lengths, _y, _y_lengths = data.x, data.x_lengths, data.y, data.y_lengths
+            except:
+                continue
             # Concating into a single collection
             if x is None:
                 x, x_lengths = _x, _x_lengths
