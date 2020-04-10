@@ -13,26 +13,8 @@ import jkbc.types as t
 import jkbc.utils.bonito.decode as bonito
 
 
-def calc_accuracy(ref: str, seq: str, balanced=False, return_alignment=False) -> t.Union[float, t.Tuple[float, str]]:
-    """
-    Calculate the accuracy between `ref` and `seq`
-    """
-    alignment, string = bonito.align(ref, seq)
-    cigar = str(alignment.cigar.decode)
-    
-    counts = defaultdict(int)
-    __split_cigar = re.compile(r"(?P<len>\d+)(?P<op>\D+)")
-    for count, op  in re.findall(__split_cigar, cigar):
-        counts[op] += int(count)
-
-    if balanced:
-        accuracy = (counts['='] - counts['I']) / (counts['='] + counts['X'] + counts['D'])
-    else:
-        accuracy = counts['='] / (counts['='] + counts['I'] + counts['X'] + counts['D'])
-    
-    if return_alignment: 
-        return accuracy, string
-    return accuracy
+def calc_accuracy(ref: str, seq: str, return_alignment=False) -> t.Union[float, t.Tuple[float, str]]:
+    return bonito.accuracy(ref, seq, return_alignment)
 
 
 def assemble(reads: t.List[str], window_size: int, stride: int, alphabet: t.Dict[int, str]) -> str:
@@ -66,7 +48,7 @@ def convert_idx_to_base_sequence(lst: t.List[int], alphabet: t.List[str]) -> str
         alphabet), "List contains indexes larger than alphabet size - 1."
     assert min(lst) >= 0, "List contains negative indexes."
     
-    return __remove_blanks(__concat_str([alphabet[x] for x in lst]))
+    return __remove_blanks(__concat_str([alphabet[int(x)] for x in lst]))
 
 
 def decode(predictions: t.Tensor3D, alphabet: str, beam_size: int = 25, threshold: float = 0.1) -> t.List[str]:

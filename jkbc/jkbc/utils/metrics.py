@@ -1,12 +1,11 @@
-# +
 from fastai.basics import *
+from fastai.callbacks.tracker import SaveModelCallback
+import numpy as np
+import torch.distributions as dist
 
 import jkbc.utils.postprocessing as pop
 import jkbc.utils.preprocessing as prep
 import jkbc.types as t
-
-import numpy as np
-from fastai.callbacks.tracker import SaveModelCallback
 
 class Loss():
     '''Abstract class for computing loss'''
@@ -45,21 +44,20 @@ class KdLoss(Loss):
         self.label_loss = label_loss.loss()
 
     def loss(self) -> functools.partial:
-        def __combined(self, y_pred_b: t.Tensor, y_b: t.Tensor, y_lengths: t.List[int]) -> float:
-        #def __combined(self, y_pred_b: t.Tensor, y_b: t.Tensor, y_lengths: t.List[int], y_teacher: t.Tensor3D) -> float:
-            y_teacher=None
-            print(y_lengths)
-            label_loss = self.label_loss(self.log_softmax(y_pred_b), y_b, y_lengths)
-            teacher = self.__knowledge_distillation_loss(y_pred_b, y_teacher)
+        def __combined(self, pred: torch.Tensor, labels: torch.Tensor, pred_lengths, label_lengths, y_teacher: t.Tensor3D) -> float:
+            # requires: pred, labels, pred_lengths, label_lengths)
+            label_loss = self.label_loss(pred, labels, pred_lengths, label_lengths)
             
-            return self.label_weight*label+self.teacher_weight*teacher
+            teacher_loss = self.__knowledge_distillation_loss(pred, y_teacher)
+            loss = self.label_weight*label_loss+self.teacher_weight*teacher_loss
+            return loss
         
         return partial(__combined, self)
     
     def __knowledge_distillation_loss(self, y_pred_b: t.Tensor, y_teacher: t.Tensor3D) -> float:
         soft_teacher = self.softmax(y_teacher/self.temperature)
         log_soft_pred = self.log_softmax(y_pred_b/self.temperature)
-        loss = torch.distributions.kl.kl_divergence(soft_teacher, log_soft_pred)
+        loss = nn.KLDivLoss(reduction='batchmean')(log_soft_pred, soft_teacher)
         return loss
 
 class ErrorRate(Callback):
@@ -110,7 +108,7 @@ def ctc_accuracy(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0
         val, count = 0.0, 0
         for index in range(len(decoded)):
             actual = pop.convert_idx_to_base_sequence(labels[index], alphabet_val)
-            accuracy = pop.calc_accuracy(actual, decoded[index])
+            accuracy = pop.calc_accuracy(actual, decoded[index], return_alignment=False)
             val += accuracy
             count += 1
             
@@ -121,6 +119,3 @@ def ctc_accuracy(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0
     alphabet_val = list(alphabet.values())
     alphabet_str = ''.join(alphabet_val)
     return ErrorRate(partial(ctc_accuracy, alphabet_val, alphabet_str, beam_size, threshold, batch_slice))
-# -
-
-

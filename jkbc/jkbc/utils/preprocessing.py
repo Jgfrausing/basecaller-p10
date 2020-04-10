@@ -30,6 +30,7 @@ class ReadObject:
         assert len(x) == len(x_lengths), "Dimensions of input parameters does not fit"
         assert len(y) == len(y_lengths), "Dimensions of output parameters does not fit"
         assert len(y) == 0 or len(y) == len(x), 'y contains elements (e.g. training data is included) but is not same size as x'
+        assert len(x) > 0, 'No windows in signal'
         self.id = read_id 
         self.x = x
         self.x_lengths = x_lengths
@@ -108,12 +109,12 @@ def convert_to_dataloaders(data: ReadObject, split: float, batch_size: int, teac
     y_valid_lengths = y_lengths[split:,:]
 
     # Create TensorDataset
-    if not teacher:
+    if teacher is None:
         train_ds = SizedTensorDataset(x_train_t, x_train_lengths, y_train_t, y_train_lengths)
         valid_ds = SizedTensorDataset(x_valid_t, x_valid_lengths, y_valid_t, y_valid_lengths)
     else: ## ERROR STARTS SOMEWHERE HERE!
-        y_train_teacher = y_teacher[:split_train]
-        y_valid_teacher = y_teacher[split_valid:]
+        y_train_teacher = teacher[:split]
+        y_valid_teacher = teacher[split:]
         
         train_ds = SizedTensorDataset(x_train_t, x_train_lengths, y_train_t, y_train_lengths, y_train_teacher)
         valid_ds = SizedTensorDataset(x_valid_t, x_valid_lengths, y_valid_t, y_valid_lengths, y_valid_teacher)
