@@ -116,3 +116,8 @@ We created a script that reads hdf5 files, and saves training data into feather 
     * Within the folder lies the files:
         - x (input data)
         - y (labels)
+
+## Common Errors
+* `AssertionError: Default process group is not initialized` while training
+   - This occurs when PyTorch is trying to train in a distributed fashion, fx via several GPUs
+   - If you don't want it to be distributed, run the following code: `import os; os.environ['WORLD_SIZE'] = '0'`
