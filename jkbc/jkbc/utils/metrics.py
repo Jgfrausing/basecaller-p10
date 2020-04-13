@@ -1,5 +1,6 @@
 from fastai.basics import *
 from fastai.callbacks.tracker import SaveModelCallback
+from fastai.callbacks import CSVLogger
 import numpy as np
 import torch.distributions as dist
 
