@@ -86,11 +86,8 @@ def write_data_to_feather_file(folder_path: t.PathLike, data: t.Tuple[np.ndarray
     
     write_any_data_to_feather_file(folder_path, data, ["x", "y", "y_lengths"])
 
-    
-    
-    
-##################################### KD ######################################
 
+##################################### KD ######################################
 TEACHERS_FOLDER = "teachers"
 
 def write_kd_y_teacher_to_feather_file(folder_path: t.PathLike, teacher_name: str, y_teacher: np.ndarray) -> None:
@@ -101,7 +98,6 @@ def write_kd_y_teacher_to_feather_file(folder_path: t.PathLike, teacher_name: st
   
   write_any_data_to_feather_file(teachers_folder, [y_teacher], [teacher_name])
 
-
 def write_any_data_to_feather_file(folder_path: t.PathLike, data, names: t.List[str]) -> None:
     assert len(data) == len(names), "Data parts and names should match in length"
     
@@ -110,7 +106,7 @@ def write_any_data_to_feather_file(folder_path: t.PathLike, data, names: t.List[
         name = names[i]
         d = data[i]
         feather.write_dataframe(pd.DataFrame(data=list(d)), os.path.join(folder_path, name))
-    
+
 def read_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, np.ndarray, t.List[int]]:
     x = feather.read_dataframe(os.path.join(folder_path, 'x'))
     y = feather.read_dataframe(os.path.join(folder_path, 'y'))
@@ -118,8 +114,8 @@ def read_data_from_feather_file(folder_path: t.PathLike) -> t.Tuple[np.ndarray, 
 
     return x.to_numpy(), y.to_numpy(dtype=np.float32), y_lengths.to_numpy().flatten().tolist()
 
- 
-def read_kd_y_teacher_from_feather_file(folder_path: t.PathLike, teacher_name: str, out_size: int, alphabet_size: int = 5) -> np.ndarray:
+
+def read_kd_y_teacher_from_feather_file(folder_path: t.PathLike, teacher_name: str, out_size: int, alphabet_size: int) -> np.ndarray:
     
     teachers_folder = pl.Path(folder_path)/TEACHERS_FOLDER
     
@@ -127,7 +123,7 @@ def read_kd_y_teacher_from_feather_file(folder_path: t.PathLike, teacher_name: s
     
     return y_teacher.to_numpy().reshape(y_teacher.shape[0], out_size, alphabet_size)
 
-def read_kd_data_from_feather_file(folder_path: t.PathLike, teacher_name: str, out_size: int, alphabet_size: int = 5) -> t.Tuple[np.ndarray, np.ndarray, t.List[int], np.ndarray]:
+def read_kd_data_from_feather_file(folder_path: t.PathLike, teacher_name: str, out_size: int, alphabet_size: int) -> t.Tuple[np.ndarray, np.ndarray, t.List[int], np.ndarray]:
     x, y, y_lengths = read_data_from_feather_file(folder_path)
     
     y_teacher = read_kd_y_teacher_from_feather_file(folder_path, teacher_name, out_size, alphabet_size) 
