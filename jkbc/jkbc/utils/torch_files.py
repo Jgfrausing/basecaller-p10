@@ -10,7 +10,7 @@ def save_training_data(data, folder):
     torch.save(torch.Tensor(data.x_lengths), f'{folder}/x_lengths.pt')
     torch.save(torch.Tensor(data.y), f'{folder}/y.pt')
     torch.save(torch.Tensor(data.y_lengths), f'{folder}/y_lengths.pt')
-        
+
 def save_teacher_data(teacher, data_path, name):
     teacher_folder = f"{data_path}/teachers";
     __make_dir(teacher_folder)
@@ -26,9 +26,13 @@ def load_training_data(folder):
 
 def load_training_data_with_teacher(folder, teacher_name):
     data = load_training_data(folder)
-    teacher = y_lengths = torch.load(f'{folder}/teachers/{teacher_name}.pt')
+    teacher = load_teacher_data(folder, teacher_name)
     return data, teacher
-    
+
+def load_teacher_data(folder, teacher_name):
+    return torch.load(f'{folder}/teachers/{teacher_name}.pt')
+
+
 def __make_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)

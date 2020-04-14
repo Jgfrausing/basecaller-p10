@@ -15,19 +15,35 @@ def save_fasta_file(entities: t.Dict[str, str], filename: t.PathLike)->None:
             seq = re.sub("(.{80})", "\\1\n", seq, 0, re.DOTALL) #Adding newlines
             f.write(f"{seq}\n")
 
-def save_preditions_to_fasta(read_object, decoded, path: t.PathLike, alphabet_values: t.List[str], assembly=None) -> None:
+def map_decoded(predict_object, alphabet_values: t.List[str], assembly=False) -> t.Tuple[t.Dict[str, str], t.Dict[str, str]]:
     references = {}
     predictions= {}
-    for index in tqdm(range(len(decoded))):
-        references[str(index)] = pop.convert_idx_to_base_sequence(read_object.y[index], alphabet_values)
-        predictions[str(index)] = decoded[index]
+    divider = '#'
+    for index in tqdm(range(len(predict_object.predictions))):
+        key = predict_object.id+divider+str(index)
+        references[key] = pop.convert_idx_to_base_sequence(predict_object.references[index], alphabet_values)
+        predictions[key] = predict_object.predictions[index]
 
     if assembly:
-        references['assembled'] = pop.convert_idx_to_base_sequence(read_object.reference, alphabet_values)
-        predictions['assembled'] = assembly
+        key = predict_object.id+divider+'assembled'
+        references[key] = pop.convert_idx_to_base_sequence(predict_object.full_reference, alphabet_values)
+        predictions[key] = predict_object.assembled
 
+    return references, predictions
+
+
+def merge(lst_of_dicts: t.List[t.Dict[str, str]]) -> t.Dict[str, str]:
+    return_dict = {}
+    for d in lst_of_dicts:
+        if bool(set(return_dict) & set(d)):
+            raise ValueError('Two dicts share a value')
+        return_dict.update(d)
+    
+    return c.OrderedDict(sorted(return_dict.items())) 
+
+
+def save_dicts(predictions: t.Dict[str, str], references: t.Dict[str, str], path:str = ''):
     if not os.path.exists(path):
         os.makedirs(path)
-
-    save_fasta_file(references, f'{path}/{read_object.id}.reference.fasta')
-    save_fasta_file(predictions, f'{path}/{read_object.id}.prediciton.fasta')
+    save_fasta_file(predictions, f'{path}/prediction.fasta')
+    save_fasta_file(references, f'{path}/reference.fasta')

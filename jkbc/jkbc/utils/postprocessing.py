@@ -13,6 +13,15 @@ import jkbc.types as t
 import jkbc.utils.bonito.decode as bonito
 
 
+class PredictObject():
+    def __init__(self, id, predictions, references, assembled, full_reference):
+        self.id = id
+        self.predictions = predictions
+        self.references = references
+        self.assembled = assembled
+        self.full_reference = full_reference
+
+
 def calc_accuracy(ref: str, seq: str, return_alignment=False) -> t.Union[float, t.Tuple[float, str]]:
     return bonito.accuracy(ref, seq, return_alignment)
 
@@ -69,10 +78,9 @@ def decode(predictions: t.Tensor3D, alphabet: str, beam_size: int = 25, threshol
     #predictions = normalise_last_dim(predictions)
     #predictions = normalise_last_dim(torch.nn.LogSoftmax(dim=2)(predictions))
     predictions = torch.nn.Softmax(dim=2)(predictions)
-    
+    predictions = predictions.cpu().numpy()
     # apply beam search on each window
-    decoded: t.List[str] = [beam_search(window.astype(np.float32), alphabet, beam_size, threshold)[0]
-                          for window in predictions.cpu().numpy()]
+    decoded: t.List[str] = [beam_search(window.astype(np.float32), alphabet, beam_size, threshold)[0] for window in predictions]
         
     return decoded
 
