@@ -1,9 +1,12 @@
+# +
+import os
+
 from fastai.basics import *
 import torch
 from tqdm import tqdm
+# -
 
 import jkbc.types as t
-import jkbc.utils.general as g
 import jkbc.utils.postprocessing as pop
 
 
@@ -62,7 +65,7 @@ def predict_range(model, signal_collection, alphabet_string, window_size, device
 def load_model_weights(model, model_path, model_name):
     try:
         if not model_name:
-            model_name = g.get_newest_model(model_path)
+            model_name = get_newest_model(model_path)
         
         state = torch.load(model_name)
         model = state.pop('model')
@@ -77,3 +80,16 @@ def signal_to_input_tensor(signal, device):
         x = torch.tensor(signal, dtype=torch.float32, device=device)
     
     return x.view(x.shape[0],1,x.shape[1])
+
+
+# +
+def get_newest_model(folder_path: t.PathLike):
+    import glob
+    list_of_files = glob.glob(os.path.join(folder_path, '*')) # * means all if need specific format then *.csv
+    if len(list_of_files) == 0: return None
+    return __get_file_name(max(list_of_files, key=os.path.getctime))
+
+def __get_file_name(file_path: t.PathLike):
+    file_name, extension = os.path.splitext(os.path.basename(file_path))
+
+    return file_name

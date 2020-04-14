@@ -9,7 +9,6 @@ from tqdm import tqdm
 
 
 import jkbc.types as t
-import jkbc.utils.files as bc_files
 import jkbc.utils.constants as constants
 import jkbc.utils.bonito.data as bonito
 
