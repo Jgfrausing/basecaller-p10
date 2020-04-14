@@ -26,11 +26,11 @@ def load_training_data(folder):
 
 def load_training_data_with_teacher(folder, teacher_name):
     data = load_training_data(folder)
-    teacher = load_teacher_data(folder, teacher_name)
+    teacher = load_teacher_data(f'{folder}/teachers/{teacher_name}.pt')
     return data, teacher
 
-def load_teacher_data(folder, teacher_name):
-    return torch.load(f'{folder}/teachers/{teacher_name}.pt')
+def load_teacher_data(teacher_path):
+    return torch.load(teacher_path)
 
 
 def __make_dir(path):

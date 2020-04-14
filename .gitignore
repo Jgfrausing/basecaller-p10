@@ -3,6 +3,7 @@ dataset.pickle
 data/
 nbs/models/*/weights
 p9/
+scripts/images/
 # Created by https://www.gitignore.io/api/linux,macos,python,windows,jupyternotebooks,visualstudiocode,pycharm
 # Edit at https://www.gitignore.io/?templates=linux,macos,python,windows,jupyternotebooks,visualstudiocode,pycharm
 
