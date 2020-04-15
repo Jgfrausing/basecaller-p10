@@ -1,6 +1,4 @@
 import collections.abc as abc
-import functools as ft
-import warnings
 
 import h5py as h5py
 import numpy as np
@@ -9,7 +7,6 @@ from tqdm import tqdm
 
 
 import jkbc.types as t
-import jkbc.utils.constants as constants
 import jkbc.utils.bonito.data as bonito
 
 
@@ -123,13 +120,6 @@ def convert_to_dataloaders(data: ReadObject, split: float, batch_size: int, teac
     valid_dl = t.DataLoader(valid_ds, batch_size=batch_size, drop_last=drop_last)
 
     return train_dl, valid_dl
-
-
-def get_prediction_lengths(y_pred_len: int, batch_size: int) -> t.Tuple[np.ndarray, np.ndarray]:
-    prediction_lengths = torch.full(
-        size=(batch_size,), fill_value=y_pred_len, dtype=torch.long)
-    
-    return prediction_lengths
 
 
 # TODO: Implement missing Generator functions
@@ -267,13 +257,3 @@ class SignalCollection(abc.Sequence):
 def add_padding(lst: t.List[int], length: int, padding_id: int) -> t.List[int]:
     assert len(lst) <= length, f"Cannot pad lst longer than given length {len(lst), length}"
     return np.append(lst, [padding_id] * (length - len(lst)))
-
-
-def _normalize(dac, dmin: float = 0, dmax: float = 850):
-    """Normalize data based on min and max values"""
-    return (np.clip(dac, dmin, dmax) - dmin) / (dmax - dmin)
-
-
-def _standardize(dac, mean: float = 395.27, std: float = 80, dmin: float = 0, dmax: float = 850):
-    """Standardize data based on"""
-    return list((np.clip(dac, dmin, dmax) - mean) / std)
