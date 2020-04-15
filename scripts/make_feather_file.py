@@ -5,7 +5,7 @@ import numpy as np
 import json
 
 import jkbc.types as t
-import jkbc.utils.constants as constants
+import jkbc.constants as constants
 import jkbc.utils.torch_files as f
 import jkbc.utils.preprocessing as prep
 

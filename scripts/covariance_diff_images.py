@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-import jkbc.utils.constants as constants
+import jkbc.constants as constants
 import jkbc.utils.torch_files as f
 
 def get_covariance_diff(teacher, student):
