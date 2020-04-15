@@ -4,10 +4,11 @@ from fastai.basics import *
 MODEL_NAME = 'bonito'
 
 
-def model(device, base_dir):
+def model(window_size, device, base_dir):
     config = toml.load(f"{base_dir}/jkbc/jkbc/model/architectures/quartznet5x5.toml")
     model = Model(config).to(device=device)
-    return model, MODEL_NAME
+    pred_out_dim = window_size//3+1
+    return model, (MODEL_NAME, pred_out_dim)
 
 
 # +
