@@ -7,7 +7,7 @@ import json
 import jkbc.types as t
 import jkbc.constants as constants
 import jkbc.files.torch_files as f
-import jkbc.files.preprocessing as prep
+import jkbc.utils.preprocessing as prep
 
 
 # DEFAULT PARAMETERS
