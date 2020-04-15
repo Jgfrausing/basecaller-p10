@@ -1,15 +1,11 @@
-import difflib
 from itertools import groupby
-import math
-import re
-from collections import defaultdict
 
-import numpy as np
 from fast_ctc_decode import beam_search
+import numpy as np
 import torch
 
-import jkbc.utils.chiron.assembly as chiron
 import jkbc.types as t
+import jkbc.utils.chiron.assembly as chiron
 import jkbc.utils.bonito.decode as bonito
 
 
@@ -74,11 +70,8 @@ def decode(predictions: t.Tensor3D, alphabet: str, beam_size: int = 25, threshol
     """
     assert beam_size > 0 and isinstance(beam_size, int), 'Beam size must be a non-zero positive integer'
     
-    # Todo: test what works best
-    #predictions = normalise_last_dim(predictions)
-    #predictions = normalise_last_dim(torch.nn.LogSoftmax(dim=2)(predictions))
-    predictions = torch.nn.Softmax(dim=2)(predictions)
-    predictions = predictions.cpu().numpy()
+    predictions = torch.nn.Softmax(dim=2)(predictions).cpu().numpy()
+    
     # apply beam search on each window
     decoded: t.List[str] = [beam_search(window.astype(np.float32), alphabet, beam_size, threshold)[0] for window in predictions]
         
@@ -86,15 +79,6 @@ def decode(predictions: t.Tensor3D, alphabet: str, beam_size: int = 25, threshol
 
 
 # HELPERS
-
-def normalise_last_dim(tensor: t.Tensor3D):
-    return (tensor[:,:]-torch.min(tensor[:,:]))/(torch.max(tensor[:,:])-torch.min(tensor[:,:]))
-
-
-def convert_logsoftmax_to_softmax(log_softmax_tensor: np.ndarray) -> np.ndarray:
-    """Use before beam search"""
-    return pow(math.e,log_softmax_tensor)
-
 
 def __remove_duplicates_and_blanks(s: str, blank_char: str = '-') -> str:
     """Removes duplicates first and then blanks, e.g. 'AA--ATT' -> 'A-AT' -> 'AAT'"""
@@ -114,16 +98,3 @@ def __remove_duplicates(s: str) -> str:
 def __concat_str(ls: t.List[str]) -> str:
     """Concatenates a list of strings into a single string."""
     return "".join(ls)
-
-
-def __calc_metrics_from_seq_matcher(seq_matcher: difflib.SequenceMatcher) -> t.Dict[str, int]:
-    """Calculate the metrics from a SequenceMatcher and store it in a tag-index dictionary."""
-    counts: t.Dict[str, int] = {'insert': 0,
-                              'delete': 0, 'equal': 0, 'replace': 0}
-    for tag, i1, i2, j1, j2 in seq_matcher.get_opcodes():
-        # Look at the inserted range rather than original
-        if tag == 'insert':
-            counts[tag] += j2 - j1
-        else:
-            counts[tag] += i2 - i1
-    return counts
