@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 import jkbc.constants as constants
-import jkbc.utils.torch_files as f
+import jkbc.files.torch_files as f
 
 def get_covariance_diff(teacher, student):
     return np.corrcoef(teacher)-np.corrcoef(student)

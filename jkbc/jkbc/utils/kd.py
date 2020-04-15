@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 import jkbc.types as t
-import jkbc.utils.torch_files as f
+import jkbc.files.torch_files as f
 
 def generate_and_save_y_teacher(folder_path: t.PathLike, teacher_name: str, x, teacher_model: nn.Module, bs: int) -> None:
     '''Uses a teacher_model to create and save y_teacher to feather files.'''
