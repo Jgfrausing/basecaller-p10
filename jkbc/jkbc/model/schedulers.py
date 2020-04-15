@@ -7,7 +7,7 @@ import fastai.callback as fcb
 import jkbc.types as t
 
 
-def get_named_schedulers(epochs, max_lr, moms: t.List[float],
+def get_named_schedulers(epochs: int, max_lr: float, moms: t.List[float],
                          cycles: t.List[int]) -> t.Dict[str, t.Callable[[fastai.basic_train.Learner], None]]:
 
     named_schedulers = {"one_cycle": partial(
@@ -80,19 +80,14 @@ def calc_total_iterations(learner: fastai.basic_train.Learner, epochs: int) -> i
     return len(learner.data.train_dl) * epochs
 
 
-def add_scheduler_to_learner(learner, scheduler: fcbs.GeneralScheduler,
-                             remove_other_schedulers: bool = True) -> None:
+def add_scheduler_to_learner(learner: fastai.basic_train.Learner, scheduler: fcbs.GeneralScheduler,
+                             remove_other_schedulers: bool = False) -> None:
     if remove_other_schedulers:
         remove_all_schedulers_from_learner(learner)
-    schedulers_in_learner = [cb for cb in learner.callbacks if isinstance(
-        cb, (fcbs.GeneralScheduler, fcbs.Scheduler))]
-    if schedulers_in_learner:
-        raise Exception("Multiple Schedulers",
-                        f"Learner already contains the following schedulers: \
-                          {[sched.cb_name for sched in schedulers_in_learner]}")
+
     learner.callbacks.append(scheduler)
 
 
-def remove_all_schedulers_from_learner(learner):
+def remove_all_schedulers_from_learner(learner) -> None:
     learner.callbacks = list(filter(lambda cb: not isinstance(
-        cb, (fcbs.GeneralScheduler, fcbs.Scheduler)), learner.callbacks))
+        cb, fcbs.GeneralScheduler), learner.callbacks))
