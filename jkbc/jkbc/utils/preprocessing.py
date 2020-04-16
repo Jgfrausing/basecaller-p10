@@ -141,10 +141,7 @@ class SignalCollection(abc.Sequence):
                  stride: int = 5, labels_per_window: t.Tuple[int, int] = None, training_data=True):
 
         assert not training_data or labels_per_window != None, "labels_per_window must be set to create training data"
-        
-        with open(bacteria_ref_path, 'r') as fp:
-            self.bacteria_dict = json.load(fp)
-        
+               
         self.filename = filename
         self.labels_per_window = labels_per_window
         self.window_size = window_size
@@ -152,17 +149,43 @@ class SignalCollection(abc.Sequence):
         self.stride = stride
         self.training_data = training_data
         
+        with open(bacteria_ref_path, 'r') as fp:
+            self.bacteria_dict = json.load(fp)
         with h5py.File(filename, 'r') as h5file:
             self.read_idx = list(h5file['Reads'].keys())
-
-    def __getitem__(self, read_id_index: int) -> ReadObject:
+        # Removing ids with unknown bacteria
+        self.read_idx = [id for id in self.read_idx if id in self.bacteria_dict.keys()]
+            
+    def get_bacteria_ids(self, bacteria: t.List[str], ignore_extension=False) -> t.List[str]:
+        fx = _ignore_extension_function(ignore_extension)
+        bacteria = set([fx(b) for b in bacteria])
+        
+        return [read_id for read_id, bac in self.bacteria_dict.items() if fx(bac) in bacteria]
+    
+    def remove_bacteria_from_collection(self, bacteria: t.List[str], ignore_extension=False)-> None:
+        bacteria_ids = self.get_bacteria_ids(bacteria, ignore_extension)
+        self.read_idx = list(set(self.read_idx)-set(bacteria_ids))
+        
+    def get_bacteria(self, ignore_extension=False):
+        bacteria = list(set(self.bacteria_dict.values()))
+        if ignore_extension:
+            fx = _ignore_extension_function(ignore_extension)
+            bacteria = list(set([fx(b) for b in bacteria]))
+        bacteria.sort()
+        return bacteria
+    
+    def __getitem__(self, read_id: t.Union[int, str]) -> ReadObject:
         """
         Returns signal_windows, label_windows, and a reference for a single signal.
+        args:
+            read_id: read id (str) or index (int)
         """
+        
         x, x_lengths = [], []
         y, y_lengths = [], []
-
-        read_id = self.read_idx[read_id_index]
+        
+        if type(read_id) == int:
+            read_id = self.read_idx[read_id]
 
         with h5py.File(self.filename, 'r') as f:
             read = f['Reads'][read_id]
@@ -264,3 +287,11 @@ class SignalCollection(abc.Sequence):
 def add_padding(lst: t.List[int], length: int, padding_id: int) -> t.List[int]:
     assert len(lst) <= length, f"Cannot pad lst longer than given length {len(lst), length}"
     return np.append(lst, [padding_id] * (length - len(lst)))
+
+
+def _ignore_extension_function(ignore_extension):
+    if ignore_extension:
+        fx = lambda x : x.split('_')[0]
+    else:
+        fx = lambda x : x
+    return fx
