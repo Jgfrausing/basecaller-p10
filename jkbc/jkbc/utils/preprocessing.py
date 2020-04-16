@@ -1,4 +1,5 @@
 import collections.abc as abc
+import json
 
 import h5py as h5py
 import numpy as np
@@ -22,12 +23,13 @@ class ReadObject:
         reference: the full genome reference
     """
 
-    def __init__(self, read_id, x: t.Tensor2D, x_lengths: t.List[int], y: t.Tensor2D, y_lengths: t.List[int], reference: t.Tensor1D):
+    def __init__(self, read_id, bacteria, x: t.Tensor2D, x_lengths: t.List[int], y: t.Tensor2D, y_lengths: t.List[int], reference: t.Tensor1D):
         assert len(x) == len(x_lengths), "Dimensions of input parameters does not fit"
         assert len(y) == len(y_lengths), "Dimensions of output parameters does not fit"
         assert len(y) == 0 or len(y) == len(x), 'y contains elements (e.g. training data is included) but is not same size as x'
         assert len(x) > 0, 'No windows in signal'
         self.id = read_id 
+        self.bacteria = bacteria
         self.x = x
         self.x_lengths = x_lengths
         self.y = y
@@ -135,10 +137,13 @@ class SignalCollection(abc.Sequence):
         training_data: to include y values or not
     """
 
-    def __init__(self, filename: t.PathLike, window_size: t.Tuple[int, int], blank_id: int, 
+    def __init__(self, filename: t.PathLike, bacteria_ref_path: t.PathLike, window_size: t.Tuple[int, int], blank_id: int, 
                  stride: int = 5, labels_per_window: t.Tuple[int, int] = None, training_data=True):
 
         assert not training_data or labels_per_window != None, "labels_per_window must be set to create training data"
+        
+        with open(bacteria_ref_path, 'r') as fp:
+            self.bacteria_dict = json.load(fp)
         
         self.filename = filename
         self.labels_per_window = labels_per_window
@@ -162,6 +167,9 @@ class SignalCollection(abc.Sequence):
         with h5py.File(self.filename, 'r') as f:
             read = f['Reads'][read_id]
             signal, ref_to_signal, reference = bonito.scale_and_align(read)
+            
+        bacteria = self.bacteria_dict[read_id]
+        print(bacteria)
         
         num_of_bases = len(reference)
         index_base_start = 0
@@ -214,9 +222,8 @@ class SignalCollection(abc.Sequence):
             x.append(window_signal)
             y.append(labels)
         
-        return ReadObject(read_id, x, x_lengths, y, y_lengths, reference)
+        return ReadObject(read_id, bacteria, x, x_lengths, y, y_lengths, reference)
 
-    
     def get_range(self, ran: t.List[int])-> t.Tuple[np.ndarray, np.ndarray, list]:
         x, x_lengths = None, None
         y, y_lengths = None, None

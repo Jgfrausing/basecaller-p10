@@ -56,7 +56,7 @@ def predict_range(model, signal_collection, alphabet_string, window_size, device
             continue
         x = signal_to_input_tensor(read_object.x, device)
         assembled, decoded = predict_and_assemble(model, x, alphabet_string, window_size, 1, beam_size, beam_threshold)
-        po = pop.PredictObject(read_object.id, decoded, read_object.y, assembled, read_object.reference)
+        po = pop.PredictObject(read_object.id, read_object.bacteria, decoded, read_object.y, assembled, read_object.reference)
         predict_objects.append(po)
         
     return predict_objects

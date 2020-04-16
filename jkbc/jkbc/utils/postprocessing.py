@@ -10,8 +10,9 @@ import jkbc.utils.bonito.decode as bonito
 
 
 class PredictObject():
-    def __init__(self, id, predictions, references, assembled, full_reference):
+    def __init__(self, id, bacteria, predictions, references, assembled, full_reference):
         self.id = id
+        self.bacteria = bacteria
         self.predictions = predictions
         self.references = references
         self.assembled = assembled
