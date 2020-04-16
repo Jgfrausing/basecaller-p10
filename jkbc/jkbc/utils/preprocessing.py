@@ -86,7 +86,7 @@ def convert_to_dataloaders(data: ReadObject, split: float, batch_size: int, teac
     window_size = len(x[0])
         
     # Turn it into tensors
-    x = torch.as_tensor(x, dtype = torch.float).view(windows, 1, window_size)
+    x = torch.as_tensor(x, dtype = torch.float16).view(windows, 1, window_size)
     x_lengths = torch.as_tensor(x_lengths, dtype = torch.long).view(windows, 1)
     
     y = torch.as_tensor(y, dtype = torch.long)
@@ -124,7 +124,6 @@ def convert_to_dataloaders(data: ReadObject, split: float, batch_size: int, teac
     return train_dl, valid_dl
 
 
-# TODO: Implement missing Generator functions
 class SignalCollection(abc.Sequence):
     """
     An iterator and generator for getting signal data from HDF5 files.
@@ -184,15 +183,18 @@ class SignalCollection(abc.Sequence):
         x, x_lengths = [], []
         y, y_lengths = [], []
         
-        if type(read_id) == int:
-            read_id = self.read_idx[read_id]
+        try:
+            read_id = self.read_idx[int(read_id)]
+        except:
+            ## not integer-like
+            pass
+            
 
         with h5py.File(self.filename, 'r') as f:
             read = f['Reads'][read_id]
             signal, ref_to_signal, reference = bonito.scale_and_align(read)
             
         bacteria = self.bacteria_dict[read_id]
-        print(bacteria)
         
         num_of_bases = len(reference)
         index_base_start = 0

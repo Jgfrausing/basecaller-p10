@@ -22,7 +22,7 @@ def load_training_data(folder):
     y = torch.load(f'{folder}/y.pt')
     y_lengths = torch.load(f'{folder}/y_lengths.pt')
     
-    return prep.ReadObject(None, x, x_lengths, y, y_lengths, None)
+    return prep.ReadObject(None, None, x, x_lengths, y, y_lengths, None)
 
 def load_training_data_with_teacher(folder, teacher_name):
     data = load_training_data(folder)

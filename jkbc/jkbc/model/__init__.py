@@ -51,8 +51,8 @@ def predict_range(model, signal_collection, alphabet_string, window_size, device
         # Predict signals
         try:
             read_object = signal_collection[index]
-        except:
-            print(f'Error: Skipping index {index} (probably because it was empty)')
+        except Exception as e:
+            print(f'Error: Skipping index {index}. {e}')
             continue
         x = signal_to_input_tensor(read_object.x, device)
         assembled, decoded = predict_and_assemble(model, x, alphabet_string, window_size, 1, beam_size, beam_threshold)
@@ -77,7 +77,7 @@ def signal_to_input_tensor(signal, device):
     if type(signal) == torch.Tensor:
         x = signal.to(device=device)
     else:
-        x = torch.tensor(signal, dtype=torch.float32, device=device)
+        x = torch.tensor(signal, dtype=torch.float16, device=device)
     
     return x.view(x.shape[0],1,x.shape[1])
 
@@ -98,7 +98,10 @@ def __get_file_name(file_path: t.PathLike):
 # -
 
 def get_available_gpu():
-    os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
-    memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
+    ## https://discuss.pytorch.org/t/how-can-find-available-gpu/24281/2
+    tmp_file = 'c53c4dc67fd811eabc550242ac130003'
+    os.system(f'nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >{tmp_file}')
+    memory_available = [int(x.split()[2]) for x in open(tmp_file, 'r').readlines()]
+    os.system(f'rm -f {tmp_file}')
     gpu = f'cuda:{np.argmax(memory_available)}'
     return torch.device(gpu)

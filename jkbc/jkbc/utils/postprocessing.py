@@ -71,7 +71,7 @@ def decode(predictions: t.Tensor3D, alphabet: str, beam_size: int = 25, threshol
     """
     assert beam_size > 0 and isinstance(beam_size, int), 'Beam size must be a non-zero positive integer'
     
-    predictions = torch.nn.Softmax(dim=2)(predictions).cpu().numpy()
+    predictions = torch.nn.Softmax(dim=2)(predictions.to(dtype=torch.float32)).cpu().numpy()
     
     # apply beam search on each window
     decoded: t.List[str] = [beam_search(window.astype(np.float32), alphabet, beam_size, threshold)[0] for window in predictions]
