@@ -28,6 +28,7 @@ $ ssh <username>@ai-pilot.srv.aau.dk
 4. Create the runuser directory (*usage yet unknown*): `mkdir runuser`
 5. Open a tmux terminal named "jupyter", which allows you to exit without terminating jobs: `tmux new -s jupyter`
 6. Run a shell in the container: `srun --gres=gpu:1 --pty singularity shell -B $HOME/runuser/:/run/user/$(id -u) --nv pytorch_20.02-py3.sif`
+    * [Multiple GPUs can also be used](#multiple-gpus-and-long-runs)
 7. Clone git repo: `git clone https://github.com/Jgfrausing/basecaller-p10.git` 
 8. Create a conda environment from the conda_env.yml file in the repo: 
     * Cd into the repository folder: `cd basecaller-p10`
@@ -59,6 +60,7 @@ $ ssh <username>@ai-pilot.srv.aau.dk
     * Attach a terminal to an existing session called "jupyter": `tmux attach -t
      jupyter`
 4. Run a shell in the container: `srun --gres=gpu:1 --pty singularity shell -B $HOME/runuser/:/run/user/$(id -u) --nv pytorch_20.02-py3.sif`
+    * [Multiple GPUs can also be used](#multiple-gpus-and-long-runs)
 5. Run Jupyter Lab: `jupyter lab --port=8860 --ip=0.0.0.0`
     * See step *11.* in the *Initial run* walthrough for how to find id, port
     and token.
@@ -68,13 +70,32 @@ $ ssh <username>@ai-pilot.srv.aau.dk
 8. Remember to choose the correct *kernel* for your notebooks (jkbc).
 
 ### Keep jupyter running
-It is important, that you keep the tab open in order to be able to continue execution
+It is important, that you keep the tab open in order to be able to continue execution.
+([By default a job is limited to 2 days, see other options here](#multiple-gpus-and-long-runs))
 1. Detach from the tmux running jupyter: `Ctrl + b` + `d`
 2. Disconnect from the aau connection: `exit`
 3. Turn of VPN
 #### Reconnecting
 1. Log into VPN and ssh into aau
 2. Reconnect kernel by `Kernel` -> `Reconnect kernel`
+
+
+### Multiple GPUs and Long Runs
+1. There are several options for running a job with multiple GPUs or for a long time. :
+  * They can be viewed inside the CLAAUDIA Frontend by running `sacctmgr show qos format=name,maxtresperuser,maxwalldurationperjob`
+  * Which outputs:
+```
+      Name     MaxTRESPU     MaxWall
+---------- ------------- -----------
+    normal    gres/gpu=1  2-00:00:00
+     short    gres/gpu=4    00:20:00
+   allgpus   gres/gpu=16
+  1gpulong    gres/gpu=1 14-00:00:00
+```
+2. To run a job with eight GPUs, use the following options with srun: `srun --qos=allgpus --gres=gpu:8`
+  * For a long run, you will have to use the `1gpulong` Quality Of Service (qos) option.
+  * Note the max gpu limits per type of qos.
+
 ---
 
 ## Conda Environment Files
