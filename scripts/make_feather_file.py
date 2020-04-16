@@ -17,9 +17,11 @@ MIN_WINDOW_SIZE = 1600
 MAX_LABEL_LEN = 400
 MIN_LABEL_LEN = 200
 
-def make_file(data_path: t.PathLike, folder_path: t.PathLike, ran: t.List[int], min_label_len: int, max_label_len: int, min_window_size:int, max_window_size:int, blank_id:int, stride:int) -> None:
+def make_file(data_path: t.PathLike, folder_path: t.PathLike, ran: t.List[int], min_label_len: int, max_label_len: int, 
+              min_window_size:int, max_window_size:int, blank_id:int, stride:int, exclude_bacteria:t.List[str]) -> None:
     # Get data range
     collection = prep.SignalCollection(data_path, labels_per_window=(min_label_len, max_label_len), window_size=(min_window_size, max_window_size), blank_id=blank_id, stride=stride)
+    collection.remove_bacteria_from_collection(exclude_bacteria, ignore_extension=True)
     data = collection.get_range(ran);
     
     # Write to file
@@ -51,15 +53,16 @@ def _equal_sum(a, b):
 def main() -> None:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--f", help="range from (default 0)", default=0)
-    parser.add_argument("--t", help="range to (default 5)", default=5)
-    parser.add_argument("--minl", help=f"fixed label length (default {MIN_LABEL_LEN})", default=MIN_LABEL_LEN)
-    parser.add_argument("--maxl", help=f"fixed label length (default {MAX_LABEL_LEN})", default=MAX_LABEL_LEN)
-    parser.add_argument("--minw", help=f"minimum window size (default {MIN_WINDOW_SIZE})", default=MIN_WINDOW_SIZE)
-    parser.add_argument("--maxw", help=f"maximum window size (default {MAX_WINDOW_SIZE})", default=MAX_WINDOW_SIZE)
-    parser.add_argument("--s", help=f"stride (default {500})", default=500)
-    parser.add_argument("--o", help=f"output path (default '{FOLDERPATH}')", default=FOLDERPATH)
-    parser.add_argument("-run_test", help="run validation test after file is saved", action="store_true")
+    parser.add_argument("-f", help="range from (default 0)", default=0)
+    parser.add_argument("-t", help="range to (default 5)", default=5)
+    parser.add_argument("-minl", help=f"fixed label length (default {MIN_LABEL_LEN})", default=MIN_LABEL_LEN)
+    parser.add_argument("-maxl", help=f"fixed label length (default {MAX_LABEL_LEN})", default=MAX_LABEL_LEN)
+    parser.add_argument("-minw", help=f"minimum window size (default {MIN_WINDOW_SIZE})", default=MIN_WINDOW_SIZE)
+    parser.add_argument("-maxw", help=f"maximum window size (default {MAX_WINDOW_SIZE})", default=MAX_WINDOW_SIZE)
+    parser.add_argument("-s", help=f"stride (default {500})", default=500)
+    parser.add_argument("-o", help=f"output path (default '{FOLDERPATH}')", default=FOLDERPATH)
+    parser.add_argument("-r", "--run_test", help="run validation test after file is saved", action="store_true")
+    parser.add_argument("-e","--exclude", nargs='+', help='bacteria to exclude (without extension)', default=[])
 
     parser.add_argument("data_path", help="path to data file")
     
@@ -73,7 +76,7 @@ def main() -> None:
     data = make_file(args.data_path, output_path, range(int(args.f), int(args.t)),
                      min_label_len=int(args.minl), max_label_len=int(args.maxl), 
                      min_window_size=int(args.minw), max_window_size=int(args.maxw),
-                     blank_id=0, stride=int(args.s))
+                     blank_id=0, stride=int(args.s), ex_bacteria=args.e)
     print('Saving config')
     dump = json.dumps(vars(args))
     with open(output_path/"config.json","w") as f:
