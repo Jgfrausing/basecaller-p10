@@ -93,3 +93,12 @@ def __get_file_name(file_path: t.PathLike):
     file_name, extension = os.path.splitext(os.path.basename(file_path))
 
     return file_name
+
+
+# -
+
+def get_available_gpu():
+    os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
+    memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
+    gpu = f'cuda:{np.argmax(memory_available)}'
+    return torch.device(gpu)
