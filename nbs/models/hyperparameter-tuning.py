@@ -17,7 +17,7 @@ import jkbc.utils.postprocessing as pop
 import jkbc.files.fasta as fasta
 
 def main():
-    DEVICE = m.get_available_gpu() 
+    DEVICE = torch.device('cuda')# m.get_available_gpu() 
     print("Device:", DEVICE)
 
     config = dict(

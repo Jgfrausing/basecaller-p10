@@ -17,6 +17,6 @@ def get_optimizer(config):
     elif ADAM == config.optimizer:
         return partial(torch.optim.Adam, amsgrad=True, lr=config.learning_rate, weight_decay=config.weight_decay)
     elif RMS_PROP == config.optimizer:
-        return partial(torch.optim.RMSprop, amsgrad=True, lr=config.learning_rate, weight_decay=config.weight_decay, momentum=config.momentum)
+        return partial(torch.optim.RMSprop, lr=config.learning_rate, weight_decay=config.weight_decay, momentum=config.momentum)
     else:
         raise NotImplementedError(f"{config.optimizer} optimizer not implemented")
