@@ -1,0 +1,91 @@
+model = "QuartzNet"
+name = "Hyper-80"
+
+[[block]]
+filters = 9
+repeat = 1
+kernel = [ 69,]
+stride = [ 6,]
+dilation = [ 1,]
+dropout = 0.0
+residual = false
+separable = false
+
+[[block]]
+filters = 55
+repeat = 8
+kernel = [ 5,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = true
+separable = true
+
+[[block]]
+filters = 5
+repeat = 6
+kernel = [ 71,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = true
+separable = true
+
+[[block]]
+filters = 3
+repeat = 1
+kernel = [ 99,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = true
+separable = true
+
+[[block]]
+filters = 125
+repeat = 3
+kernel = [ 67,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = true
+separable = true
+
+[[block]]
+filters = 59
+repeat = 9
+kernel = [ 25,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = true
+separable = true
+
+[[block]]
+filters = 4
+repeat = 1
+kernel = [ 31,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = false
+separable = true
+
+[[block]]
+filters = 309
+repeat = 1
+kernel = [ 1,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = false
+separable = false
+
+[labels]
+labels = [ "N", "A", "C", "G", "T",]
+
+[input]
+features = 1
+
+[encoder]
+activation = "gelu"

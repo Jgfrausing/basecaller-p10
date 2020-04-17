@@ -2,18 +2,20 @@ import toml
 from fastai.basics import *
 
 
-def model(window_size, device, definition):
+def model(window_size, device, definition, dropout):
     config = toml.load(definition)
-    model_name = config['name']
     model = Model(config).to(device=device).half()
-    pred_out_dim = window_size//int(config['pred_out_scale'])+1
-    return model, (model_name, pred_out_dim)
+    
+    for b in config['block']:
+        b['dropout'] = dropout
+    return model
 
 
 # +
 activations = {
     "relu": nn.ReLU,
     "leaky_relu": nn.LeakyReLU,
+    "gelu": nn.GELU,
 }
 
 class Model(nn.Module):

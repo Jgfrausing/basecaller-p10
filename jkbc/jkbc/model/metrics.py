@@ -1,8 +1,12 @@
+# +
+import math
+
 from fastai.basics import *
 from fastai.callbacks.tracker import SaveModelCallback, EarlyStoppingCallback
 from fastai.callbacks import CSVLogger
 import numpy as np
 import torch.distributions as dist
+# -
 
 import jkbc.utils.postprocessing as pop
 import jkbc.utils.preprocessing as prep
@@ -15,17 +19,16 @@ class Loss():
 
 class CtcLoss(Loss):
     '''CTC loss'''
-    def __init__(self, window_size: int, prediction_size, batch_size: int, alphabet_size:int):
-        self.input_to_output_scale = 3 # prediction_size/window_size
+    def __init__(self, prediction_scale, batch_size: int, alphabet_size:int):
+        self.input_to_output_scale = prediction_scale
         self.batch_size = batch_size
         self.alphabet_size = alphabet_size
         self.log_softmax = nn.LogSoftmax(dim=2)
     
     def loss(self) -> functools.partial:
         def __ctc_loss(alphabet_size: int, pred: torch.Tensor, labels: torch.Tensor, pred_lengths, label_lengths) -> float:
-            #pred = pred.contiguous().view((pred.shape[1], pred.shape[0], alphabet_size))
-            
             pred_lengths = pred_lengths/self.input_to_output_scale
+            
             return nn.CTCLoss()(self.log_softmax(pred).transpose(1,0), labels, pred_lengths, label_lengths)
         return partial(__ctc_loss, self.alphabet_size)
 
