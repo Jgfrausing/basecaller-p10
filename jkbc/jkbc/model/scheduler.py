@@ -22,7 +22,7 @@ def get_scheduler(config) -> t.Callable[[fastai.basic_train.Learner], None]:
         return attach_annealing_cos_scheduler(epochs=config.epochs, min_lr=config.learning_rate_min, max_lr=config.learning_rate)
     elif ANNEALING_COS_WARMRESTART == config.scheduler:
         return attach_annealing_cos_warmrestart_scheduler(epochs=config.epochs, min_lr=config.learning_rate_min, max_lr=config.learning_rate,
-                                             mom=config.momentum, n_cycles=cycle)
+                                             mom=config.momentum, n_cycles=config.cycle)
     else: raise NotImplementedError(f"{config.scheduler} scheduler not implemented")
 
 

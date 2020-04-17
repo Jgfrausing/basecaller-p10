@@ -88,7 +88,7 @@ class ErrorRate(Callback):
         return add_metrics(last_metrics, self.val/self.count)
 
 
-def ctc_accuracy(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0, batch_slice:int = 5) -> functools.partial:
+def ctc_accuracy(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0, batch_slice:int = 20) -> functools.partial:
     """CTC accuracy function to use with ErrorRate.
 
     Args:

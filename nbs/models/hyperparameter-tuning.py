@@ -25,7 +25,7 @@ def main():
         device = DEVICE,
         
         # Data
-        data_set = 'Range0-5-FixLabelLen400-winsize4096',
+        data_set = 'Range0-1000-FixLabelLen400-winsize4096',
         alphabet = constants.ALPHABET,
         
         # Training
@@ -33,6 +33,7 @@ def main():
         knowledge_distillation = True,
         pretrained_weights = None,
         epochs = 25,
+        cycle = 4,
         batch_size = 2**6,
         learning_rate = 0.001,
         learning_rate_min = 0,
@@ -62,13 +63,14 @@ def main():
     ALPHABET_SIZE     = len(ALPHABET_VAL)
 
     config['model_definition'] = "quartznet5x5.toml"
-    config['model_name'], config['dimensions_out_scale'] = factory.get_model_details(config['model_definition'], config['window_size'])
-
+    
 
     wandb.init(config=config)
     # THIS IS WHERE THE MAGIC HAPPENS
     config = wandb.config
-
+    config.model_name, config.dimensions_out_scale = factory.get_model_details(config.model_definition, config.window_size)
+    
+    print(config)
     model = factory.bonito(config.window_size, config.device, config.model_definition, config.dropout)
 
 
