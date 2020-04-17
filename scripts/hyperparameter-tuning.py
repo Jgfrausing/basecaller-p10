@@ -62,7 +62,7 @@ def main():
     ALPHABET_SIZE     = len(ALPHABET_VAL)
 
     config['model_definition'] = "quartznet5x5.toml"
-    config['model_name'], config['dimensions_out_prediction'] = factory.get_model_details(config['model_definition'], config['window_size'])
+    config['model_name'], config['dimensions_out_scale'] = factory.get_model_details(config['model_definition'], config['window_size'])
 
 
     wandb.init(config=config)
@@ -73,7 +73,7 @@ def main():
 
 
     # Loss, metrics and callback
-    _ctc_loss = metric.CtcLoss(config.window_size, config.dimensions_out_prediction, config.batch_size, ALPHABET_SIZE)
+    _ctc_loss = metric.CtcLoss(config.dimensions_out_scale, config.batch_size, ALPHABET_SIZE)
     _kd_loss = metric.KdLoss(alpha=config.kd_alpha, temperature=config.kd_temperature, label_loss=_ctc_loss)
     loss = _kd_loss.loss() if config.knowledge_distillation else _ctc_loss.loss()
 
@@ -91,9 +91,7 @@ def main():
     # Convert to databunch
     databunch = DataBunch(train_dl, valid_dl, device=config.device)
 
-
     # ## Model
-
     optimizer = optimizer.get_optimizer(config)
     scheduler = scheduler.get_scheduler(config)
 
