@@ -7,8 +7,8 @@ from wandb.fastai import WandbCallback
 
 import jkbc.model as m
 import jkbc.model.factory as factory
-import jkbc.model.optimizer as optimizer
-import jkbc.model.scheduler as scheduler
+import jkbc.model.optimizer as optim
+import jkbc.model.scheduler as sched
 import jkbc.constants as constants
 import jkbc.files.torch_files as f
 import jkbc.model.metrics as metric
@@ -39,8 +39,8 @@ def main():
         dropout = 0.1,
         weight_decay = .1,
         momentum = .0,
-        optimizer = optimizer.ADAM_W,
-        scheduler = scheduler.ONE_CYCLE,
+        optimizer = optim.ADAM_W,
+        scheduler = sched.ONE_CYCLE,
         kd_temperature = 20,
         kd_alpha = 0.5,
         drop_last = False,
@@ -92,8 +92,8 @@ def main():
     databunch = DataBunch(train_dl, valid_dl, device=config.device)
 
     # ## Model
-    optimizer = optimizer.get_optimizer(config)
-    scheduler = scheduler.get_scheduler(config)
+    optimizer = optim.get_optimizer(config)
+    scheduler = sched.get_scheduler(config)
 
     learner = Learner(databunch, model, loss_func=loss, metrics=metrics, opt_func=optimizer, callback_fns=WandbCallback).to_fp16()
     scheduler(learner)
