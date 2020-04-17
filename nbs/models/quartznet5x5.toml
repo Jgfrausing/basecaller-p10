@@ -1,4 +1,6 @@
 model = "QuartzNet"
+name = "bonito"
+pred_out_scale = 3 
 
 [labels]
 labels = ["N", "A", "C", "G", "T"]

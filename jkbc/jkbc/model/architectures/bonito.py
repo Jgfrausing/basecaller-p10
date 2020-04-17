@@ -1,14 +1,13 @@
 import toml
 from fastai.basics import *
 
-MODEL_NAME = 'bonito'
 
-
-def model(window_size, device, base_dir):
-    config = toml.load(f"{base_dir}/jkbc/jkbc/model/architectures/quartznet5x5.toml")
+def model(window_size, device, definition):
+    config = toml.load(definition)
+    model_name = config['name']
     model = Model(config).to(device=device).half()
-    pred_out_dim = window_size//3+1
-    return model, (MODEL_NAME, pred_out_dim)
+    pred_out_dim = window_size//int(config['pred_out_scale'])+1
+    return model, (model_name, pred_out_dim)
 
 
 # +
@@ -16,7 +15,6 @@ activations = {
     "relu": nn.ReLU,
     "leaky_relu": nn.LeakyReLU,
 }
-
 
 class Model(nn.Module):
     """

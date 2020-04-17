@@ -1,5 +1,6 @@
 # +
 import os
+import toml
 
 from fastai.basics import *
 import torch
@@ -42,10 +43,10 @@ def get_accuracies(refs, seqs, alphabet_values, return_alignment=False):
     return accuracy
 
 def predict_range(model, signal_collection, alphabet_string, window_size, device, indexes=None, beam_size=25, beam_threshold=0.1) -> t.List[pop.PredictObject]:
-    if indexes is None: 
+    if indexes is None or len(indexes) > len(signal_collention): 
         indexes = range(len(signal_collection))
         print(f"Warning: predicting all {indexes} signals")
-    
+            
     predict_objects = []
     for index in tqdm(indexes):
         # Predict signals
@@ -75,7 +76,7 @@ def load_model_weights(model, model_path, model_name):
 
 def signal_to_input_tensor(signal, device):
     if type(signal) == torch.Tensor:
-        x = signal.to(device=device)
+        x = signal.to(device=device, dtype=torch.float16)
     else:
         x = torch.tensor(signal, dtype=torch.float16, device=device)
     
@@ -105,3 +106,14 @@ def get_available_gpu():
     os.system(f'rm -f {tmp_file}')
     gpu = f'cuda:{np.argmax(memory_available)}'
     return torch.device(gpu)
+
+
+def save_setup(model_dir, model, data_set, knowlegde_distillation, teacher, batch_size, device):
+    os.makedirs(model_dir)
+    obj = {'model': model, 'data_set': data_set, 'knowlegde_distillation': knowlegde_distillation,
+            'teacher': teacher, 'batch_size': batch_size, 'device': device}
+    
+    toml_string = toml.dumps(obj)
+    with open(f'{model_dir}/definition.toml', 'w') as f:
+        f.writelines(toml_string)
+    

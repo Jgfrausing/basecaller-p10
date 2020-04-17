@@ -271,7 +271,7 @@ class SignalCollection(abc.Sequence):
                 y_lengths += _y_lengths
                         
         assert len(x) == len(y) == len(x_lengths) == len(y_lengths), "Dimensions does not match for training data"
-        return ReadObject(None, x, x_lengths, y, y_lengths, None)
+        return ReadObject(None, None, x, x_lengths, y, y_lengths, None)
     
     def generator(self) -> ReadObject:
         """Get the next piece of data.
