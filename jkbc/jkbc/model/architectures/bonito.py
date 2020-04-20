@@ -181,9 +181,22 @@ class Block(nn.Module):
         return activation, nn.Dropout(p=dropout)
 
     def get_padding(self, kernel_size, stride, dilation):
-        if stride > 1 and dilation > 1:
-            raise ValueError("Dilation and stride can not both be greater than 1")
-        return (kernel_size // 2) * dilation
+        if stride == 1 and kernel_size%2 == 0:
+            raise ValueError(f"stride ({stride}) and kernel_size ({kernel_size}) cannot be padded to contain input size")
+        
+        #Dilation simulates an increased kernel size (where we ignore the zeros)
+        #This means that kernel_size 5 and dilation 1 is similiar to kernel size 3 and dilation 2 regardig how much to pad
+        
+        dilated_kernel_size = kernel_size+(kernel_size-1)*(dilation-1)
+        # kernel_size 1 = 0 padding, kernel_size 3 = 1 padding, kernel_size x = x//2 padding
+        padding_kernel = dilated_kernel_size//2-1
+        
+        # Every increment in stride (from 1) requires one additional padding on each side 
+        padding_stride=2*stride-1
+        
+        # Padding is sum of padding caused by kernel and by stride 
+        padding = padding_kernel+padding_stride
+        return padding
 
     def get_tcs(self, in_channels, out_channels, kernel_size=1, stride=1, dilation=1, padding=0, bias=False, separable=False):
         return [
