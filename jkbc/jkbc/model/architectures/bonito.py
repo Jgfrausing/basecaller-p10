@@ -1,14 +1,29 @@
+# +
+import math
 import toml
+
 from fastai.basics import *
+import torch
+
+import jkbc.types as t
 
 
-def model(window_size, device, definition, dropout):
-    config = toml.load(definition)
+# -
+
+def model(window_size, device, definition: t.Union[dict, t.PathLike]):
+    if type(definition) == dict:
+        config = definition
+    else:
+        config = toml.load(definition)
+    print(config)
     model = Model(config).to(device=device).half()
     
-    for b in config['block']:
-        b['dropout'] = dropout
-    return model
+    test_input = torch.ones(1, 1, window_size, dtype=torch.float16, device=device)
+    test_output = model(test_input)
+    out_dimension = test_output.shape[1]
+    out_scale = math.ceil(window_size/out_dimension)
+
+    return model, out_scale
 
 
 # +
@@ -31,11 +46,27 @@ class Model(nn.Module):
         self.features = config['block'][-1]['filters']
         self.encoder = Encoder(config)
         self.decoder = Decoder(self.features, len(self.alphabet))
+        if 'output_size' not in config or None == config['output_size']:
+            self.compressor = None
+            print('no compression')
+        else:
+            self.compressor = self.compressor(1366, config['output_size'])
+            print('using compression')
 
     def forward(self, x):
         encoded = self.encoder(x)
-        return self.decoder(encoded)
-
+        decoded = self.decoder(encoded)
+        if self.compressor:
+            return self.compressor(decoded)
+        return decoded
+    
+    def compressor(self, input_size, output_size):
+        self.layer = nn.Sequential(
+             nn.Conv1d(input_size, output_size, 16, stride=2, padding=(output_size-1)//2)
+            ,nn.BatchNorm1d(output_size)
+            ,nn.ReLU()
+            ,nn.Linear(output_size,len(self.alphabet))
+        )
 
 class Encoder(nn.Module):
     """
@@ -184,3 +215,10 @@ class Decoder(Module):
     def forward(self, x):
         x = self.layers(x[-1])
         return x.transpose(1, 2)
+# -
+
+
+
+
+
+

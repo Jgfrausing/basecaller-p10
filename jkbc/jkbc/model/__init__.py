@@ -116,4 +116,8 @@ def save_setup(model_dir, model, data_set, knowlegde_distillation, teacher, batc
     toml_string = toml.dumps(obj)
     with open(f'{model_dir}/definition.toml', 'w') as f:
         f.writelines(toml_string)
-    
+
+
+def get_parameter_count(model):
+    return sum(p.numel() for p in model.parameters())
+

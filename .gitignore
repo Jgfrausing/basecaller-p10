@@ -5,7 +5,7 @@ nbs/models/*/weights
 p9/
 scripts/images/
 nbs/models/hyper/
-nbs/models/wandb
+wandb
 # Created by https://www.gitignore.io/api/linux,macos,python,windows,jupyternotebooks,visualstudiocode,pycharm
 # Edit at https://www.gitignore.io/?templates=linux,macos,python,windows,jupyternotebooks,visualstudiocode,pycharm
 

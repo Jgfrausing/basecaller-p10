@@ -1,52 +1,43 @@
-from fastai.basics import *
+# +
+import yaml
 import json
-import toml
-from tqdm import tqdm
+
+from fastai.basics import *
 import wandb
+from wandb.wandb_config import Config
 from wandb.fastai import WandbCallback
+# -
 
 import jkbc.model as m
 import jkbc.model.factory as factory
 import jkbc.model.optimizer as optim
 import jkbc.model.scheduler as sched
-import jkbc.constants as constants
 import jkbc.files.torch_files as f
 import jkbc.model.metrics as metric
 import jkbc.utils.preprocessing as prep
-import jkbc.utils.postprocessing as pop
-import jkbc.files.fasta as fasta
+import jkbc.utils.bonito.tune as bonito
+
+def get_nested_dict(config, key):
+    res = config[key]
+    for k, v in dict(config).items():
+        if '.' in k and k.split('.')[0] == key:
+            inner_key = k.split('.')[1]
+            res[inner_key] = v
+    return res
+
 
 def main():
     DEVICE = torch.device('cuda')# m.get_available_gpu() 
     print("Device:", DEVICE)
 
-    config = dict(
-        ## Device
-        device = DEVICE,
-        
-        # Data
-        data_set = 'Range0-1000-FixLabelLen400-winsize4096',
-        alphabet = constants.ALPHABET,
-        
-        # Training
-        teacher_name = 'bonito',
-        knowledge_distillation = True,
-        pretrained_weights = None,
-        epochs = 25,
-        cycle = 4,
-        batch_size = 2**6,
-        learning_rate = 0.001,
-        learning_rate_min = 0,
-        dropout = 0.1,
-        weight_decay = .1,
-        momentum = .0,
-        optimizer = optim.ADAM_W,
-        scheduler = sched.ONE_CYCLE,
-        kd_temperature = 20,
-        kd_alpha = 0.5,
-        drop_last = False,
-    )
-
+    with open('config_default.yaml', 'r') as config_file:
+        config = yaml.load(config_file, Loader=yaml.FullLoader)
+    config['device'] = DEVICE
+    
+    wandb.init(config=config)
+    # THIS IS WHERE THE MAGIC HAPPENS
+    # fix to issue https://github.com/wandb/client/issues/982
+    config = wandb.config
     # Adding additional info about training data
     BASE_DIR = Path("../..")
     PATH_DATA = 'data/feather-files'
@@ -61,26 +52,25 @@ def main():
     ALPHABET_VAL      = list(config['alphabet'].values())
     ALPHABET_STR      = ''.join(ALPHABET_VAL)
     ALPHABET_SIZE     = len(ALPHABET_VAL)
-
-    config['model_definition'] = "quartznet5x5.toml"
     
-
-    wandb.init(config=config)
-    # THIS IS WHERE THE MAGIC HAPPENS
-    config = wandb.config
-    config.model_name, config.dimensions_out_scale = factory.get_model_details(config.model_definition, config.window_size)
+    model_params = get_nested_dict(config, 'model_params')
+    model_config = bonito.get_bonito_config(config.model_params)
+    model_config['output_size'] = config['output_size']
+    print(model_config['output_size'])
     
-    print(config)
-    model = factory.bonito(config.window_size, config.device, config.model_definition, config.dropout)
-
-
+    model, config.dimensions_out_scale = factory.bonito(config.window_size, config.device, model_config)
+    
+    config.parameters = m.get_parameter_count(model)
+    
+    if config.max_paramters < config.parameters:
+        raise ValueError("Too many parameters ({paramaters})")
+    
     # Loss, metrics and callback
     _ctc_loss = metric.CtcLoss(config.dimensions_out_scale, config.batch_size, ALPHABET_SIZE)
     _kd_loss = metric.KdLoss(alpha=config.kd_alpha, temperature=config.kd_temperature, label_loss=_ctc_loss)
     loss = _kd_loss.loss() if config.knowledge_distillation else _ctc_loss.loss()
 
     metrics = [metric.ctc_accuracy(config.alphabet, 5)]
-
 
     # Load data
     if config.knowledge_distillation:
@@ -101,9 +91,10 @@ def main():
     scheduler(learner)
 
     # Train
-
     learner.fit(config.epochs, lr=config.learning_rate, wd=config.weight_decay)
 
 
 if __name__ == '__main__':
     main()
+
+
