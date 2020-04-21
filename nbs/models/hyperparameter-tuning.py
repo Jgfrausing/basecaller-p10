@@ -3,6 +3,7 @@ import yaml
 import json
 import hashlib
 from collections import OrderedDict
+import argparse
 
 from fastai.basics import *
 import wandb
@@ -28,11 +29,11 @@ def get_nested_dict(config, key):
             res[inner_key] = v
     return res
 
-def hash_config(config):
-    values = OrderedDict(dict(config)).values()
-    encoded = hashlib.md5(''.join(str(values)).encode())
-    return encoded.hexdigest()
-
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--data_set", help="Override data set from config", default=None)
+parser.add_argument("-id", help="Identifier for run", default=None)
+parser.add_argument("-s", "--output size", help="size of last layer in network", default=None)
+args = parser.parse_args()
 
 # +
 DEVICE = torch.device('cuda')# m.get_available_gpu() 
@@ -41,17 +42,19 @@ with open('config_default.yaml', 'r') as config_file:
     config = yaml.load(config_file, Loader=yaml.FullLoader)
 config['device'] = DEVICE
 
-# Use to override dataset from wandb config
-data_set = config['data_set'] if config['use_default_data_set'] else None
-
-wandb.init(config=config) #, resume='allow', id='bonito_stride6')
+if args.id:
+    wandb.init(config=config, resume='allow', id=args.id)
+else:
+    wandb.init(config=config)
 wandb.run.save()
 # THIS IS WHERE THE MAGIC HAPPENS
 # fix to issue https://github.com/wandb/client/issues/982
 config = wandb.config
 config.id = wandb.run.id
-if data_set:
-    config.data_set = data_set
+if args.d:
+    config.data_set = args.d
+    print('Data set used:', args.d)
+    
 print(f'Resumed: {wandb.run.resumed}\nId: {config.id}\nDevice: {config.device}')
 
 # +
@@ -75,8 +78,7 @@ ALPHABET_SIZE     = len(ALPHABET_VAL)
 # get model
 model_params = get_nested_dict(config, 'model_params')
 model_config = bonito.get_bonito_config(config.model_params)
-model_config['output_size'] = config['output_size']
-
+model_config['output_size'] = args.s
 
 model, config.dimensions_out_scale = factory.bonito(config.window_size, config.device, model_config)
     
