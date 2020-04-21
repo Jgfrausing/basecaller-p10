@@ -44,7 +44,7 @@ config['device'] = DEVICE
 # Use to override dataset from wandb config
 data_set = config['data_set'] if config['use_default_data_set'] else None
 
-wandb.init(config=config, resume='allow', id='bonito_stride6')
+wandb.init(config=config) #, resume='allow', id='bonito_stride6')
 wandb.run.save()
 # THIS IS WHERE THE MAGIC HAPPENS
 # fix to issue https://github.com/wandb/client/issues/982

@@ -1,8 +1,9 @@
 # output size of network 
-output_size: 683 # 'none' makes no compressoin of output
+# 'none' makes no compressoin of output
+output_size: false
 # if this is true, then the listed dataset is used.
 # otherwise wandb uses the one that was used for the last time the run was made
-use_default_data_set: true
+use_default_data_set: false
 data_set: Range0-1000-FixLabelLen400-winsize4096
 alphabet:
   0: '-'

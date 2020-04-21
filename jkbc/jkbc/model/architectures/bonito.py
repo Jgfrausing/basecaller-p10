@@ -46,7 +46,7 @@ class Model(nn.Module):
         self.features = config['block'][-1]['filters']
         self.encoder = Encoder(config)
         self.decoder = Decoder(self.features, len(self.alphabet))
-        if 'output_size' not in config or None == config['output_size']:
+        if 'output_size' not in config or not config['output_size']:
             self.compressor = None
             print('No compression')
         else:
