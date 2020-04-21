@@ -1,4 +1,9 @@
-output_size: 683
+# output size of network 
+output_size: 683 # 'none' makes no compressoin of output
+# if this is true, then the listed dataset is used.
+# otherwise wandb uses the one that was used for the last time the run was made
+use_default_data_set: true
+data_set: Range0-1000-FixLabelLen400-winsize4096
 alphabet:
   0: '-'
   1: A
@@ -8,7 +13,6 @@ alphabet:
 max_paramters: 6678533333 #6678533 # bonito size
 batch_size: 170
 cycle: 4
-data_set: Range0-1000-FixLabelLen400-winsize4096
 device: 'cuda'
 drop_last: true
 dropout: 0.1

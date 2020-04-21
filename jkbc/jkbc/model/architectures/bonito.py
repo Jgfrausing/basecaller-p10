@@ -15,7 +15,7 @@ def model(window_size, device, definition: t.Union[dict, t.PathLike]):
         config = definition
     else:
         config = toml.load(definition)
-    print(config)
+    
     model = Model(config).to(device=device).half()
     
     test_input = torch.ones(1, 1, window_size, dtype=torch.float16, device=device)
@@ -48,10 +48,10 @@ class Model(nn.Module):
         self.decoder = Decoder(self.features, len(self.alphabet))
         if 'output_size' not in config or None == config['output_size']:
             self.compressor = None
-            print('no compression')
+            print('No compression')
         else:
-            self.compressor = self.compressor(1366, config['output_size'])
-            print('using compression')
+            self.compressor = self.compressor(1366, config['output_size'], 15)
+            print('Using compression')
 
     def forward(self, x):
         encoded = self.encoder(x)
@@ -60,12 +60,12 @@ class Model(nn.Module):
             return self.compressor(decoded)
         return decoded
     
-    def compressor(self, input_size, output_size):
+    def compressor(self, input_size, output_size, kernel_size, stride=1, dilation=1):
+        padding = _get_padding(kernel_size, stride, dilation, len(self.alphabet))
         self.layer = nn.Sequential(
-             nn.Conv1d(input_size, output_size, 16, stride=2, padding=(output_size-1)//2)
+             nn.Conv1d(input_size, output_size, kernel_size, stride=stride, padding=padding)
             ,nn.BatchNorm1d(output_size)
             ,nn.ReLU()
-            ,nn.Linear(output_size,len(self.alphabet))
         )
 
 class Encoder(nn.Module):
@@ -145,7 +145,7 @@ class Block(nn.Module):
         self.conv = nn.ModuleList()
 
         _in_channels = in_channels
-        padding = self.get_padding(kernel_size[0], stride[0], dilation[0])
+        padding = _get_padding(kernel_size[0], stride[0], dilation[0], _in_channels)
 
         # add the first n - 1 convolutions + activation
         for _ in range(repeat - 1):
@@ -180,24 +180,6 @@ class Block(nn.Module):
     def get_activation(self, activation, dropout):
         return activation, nn.Dropout(p=dropout)
 
-    def get_padding(self, kernel_size, stride, dilation):
-        if stride == 1 and kernel_size%2 == 0:
-            raise ValueError(f"stride ({stride}) and kernel_size ({kernel_size}) cannot be padded to contain input size")
-        
-        #Dilation simulates an increased kernel size (where we ignore the zeros)
-        #This means that kernel_size 5 and dilation 1 is similiar to kernel size 3 and dilation 2 regardig how much to pad
-        
-        dilated_kernel_size = kernel_size+(kernel_size-1)*(dilation-1)
-        # kernel_size 1 = 0 padding, kernel_size 3 = 1 padding, kernel_size x = x//2 padding
-        padding_kernel = dilated_kernel_size//2-1
-        
-        # Every increment in stride (from 1) requires one additional padding on each side 
-        padding_stride=2*stride-1
-        
-        # Padding is sum of padding caused by kernel and by stride 
-        padding = padding_kernel+padding_stride
-        return padding
-
     def get_tcs(self, in_channels, out_channels, kernel_size=1, stride=1, dilation=1, padding=0, bias=False, separable=False):
         return [
             TCSConv1d(
@@ -228,10 +210,20 @@ class Decoder(Module):
     def forward(self, x):
         x = self.layers(x[-1])
         return x.transpose(1, 2)
+
+
 # -
 
+def _get_padding(kernel_size, stride, dilation, features):
+    # https://www.quora.com/How-can-I-calculate-the-size-of-output-of-convolutional-layer
+    if stride == 1 and kernel_size%2 == 0:
+        raise ValueError(f"stride ({stride}) and kernel_size ({kernel_size}) cannot be padded to contain input size")
 
+    #Dilation simulates an increased kernel size (where we ignore the zeros)
+    #This means that kernel_size 5 and dilation 1 is similiar to kernel size 3 and dilation 2 regardig how much to pad
+    features = features-1
 
+    dilated_kernel_size = kernel_size+(kernel_size-1)*(dilation-1)
+    padding = (dilated_kernel_size+features*stride-features)//2
 
-
-
+    return padding
