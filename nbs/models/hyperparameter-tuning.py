@@ -21,12 +21,23 @@ import jkbc.utils.preprocessing as prep
 import jkbc.utils.bonito.tune as bonito
 import jkbc.utils as utils
 
+'''
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_set", help="Override data set from config", default=None)
 parser.add_argument("-id", help="Identifier for run", default=None)
 parser.add_argument("-s", "--output_size", help="size of last layer in network", default=None)
 parser.add_argument("--epochs", help="Number of epochs", default=None)
 args = parser.parse_args()
+'''
+class EmptyClass(object):
+  def __init__(self):
+    pass
+    
+args = EmptyClass()
+args.data_set = None
+args.id = None
+args.output_size = None
+args.epochs = None
 
 # +
 DEVICE = torch.device('cuda')# m.get_available_gpu() 
@@ -74,14 +85,23 @@ ALPHABET_SIZE     = len(ALPHABET_VAL)
 config['model_params']['output_size'] = int(args.output_size) if args.output_size else None
 model_params = utils.get_nested_dict(config, 'model_params')
 
+def convert_kernel_sizes(model_params):
+  for k, v in model_params.items():
+    if 'kernel' in k:
+      model_params[k] = v*2+1
+  return model_params
+
+model_params = convert_kernel_sizes(model_params)
+
+
 model_config = bonito.get_bonito_config(model_params)
 
 model, config.dimensions_out_scale = factory.bonito(config.window_size, config.device, model_config)
     
 config.parameters = m.get_parameter_count(model)
 wandb.run.save()
-if config.max_paramters < config.parameters:
-    raise ValueError("Too many parameters ({paramaters})")
+if config.max_parameters < config.parameters:
+    raise ValueError(f"Too many parameters ({parameters})")
 
 # +
 # Loss, metrics and callback

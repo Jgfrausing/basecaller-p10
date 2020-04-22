@@ -5,14 +5,14 @@ alphabet:
   2: C
   3: G
   4: T
-max_paramters: 6678533333 #6678533 # bonito size
+max_parameters: 6678533 #6678533 # bonito size
 batch_size: 170
 cycle: 4
 device: 'cuda'
 drop_last: true
 dropout: 0.1
 epochs: 50
-knowledge_distillation: false
+knowledge_distillation: true
 kd_alpha: 0.5
 kd_temperature: 20
 learning_rate: 0.001
@@ -63,4 +63,3 @@ pretrained_weights: null
 scheduler: none
 teacher_name: bonito
 weight_decay: 0.1
-
