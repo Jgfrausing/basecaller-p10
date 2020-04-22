@@ -71,7 +71,6 @@ ALPHABET_SIZE     = len(ALPHABET_VAL)
 
 # +
 # get model
-
 config['model_params']['output_size'] = int(args.output_size) if args.output_size else None
 model_params = utils.get_nested_dict(config, 'model_params')
 
@@ -115,7 +114,7 @@ scheduler(learner)
 if wandb.run.resumed:
     try:
         weights = wandb.restore('bestmodel.pth')
-        # fastai requirest the name without .pth
+        # fastai requests the name without .pth
         weight_name = '.'.join(weights.name.split('.')[:-1])
         learner.load(weight_name)
     except:
@@ -123,7 +122,7 @@ if wandb.run.resumed:
 # -
 
 # Train
-epochs = args.epochs if args.epochs else config.epochs
-learner.fit(config.epochs, lr=config.learning_rate, wd=config.weight_decay)
+epochs = int(args.epochs) if args.epochs else config.epochs
+learner.fit(epochs, lr=config.learning_rate, wd=config.weight_decay)
 
 

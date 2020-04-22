@@ -30,7 +30,7 @@ parser.add_argument("--device", help="device",default='cuda')
 parser.add_argument("--bacteria", help="Bacteria dictionary", default=f'{BASE_DIR}/{constants.BACTERIA_DICT_PATH}')
 
 args = parser.parse_args()
-root_dir = f'tmp/{args.id}'
+root_dir = f'.tmp/{args.id}'
 
 # +
 # Parameters
