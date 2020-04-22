@@ -1,9 +1,3 @@
-# output size of network 
-# 'none' makes no compressoin of output
-output_size: false
-# if this is true, then the listed dataset is used.
-# otherwise wandb uses the one that was used for the last time the run was made
-use_default_data_set: false
 data_set: Range0-1000-FixLabelLen400-winsize4096
 alphabet:
   0: '-'
@@ -17,7 +11,7 @@ cycle: 4
 device: 'cuda'
 drop_last: true
 dropout: 0.1
-epochs: 50
+epochs: 2
 knowledge_distillation: false
 kd_alpha: 0.5
 kd_temperature: 20

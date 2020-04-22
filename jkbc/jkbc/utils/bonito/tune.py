@@ -6,7 +6,7 @@ def get_bonito_config(config: t.Dict):
     blocks = 3 + config['b_blocks']
     values_str = ''.join([str(val) for val in config.values()])
     hashed = hashlib.md5(values_str.encode()).hexdigest()
-    model = {'model': hashed}
+    model = dict(model = hashed, output_size = config['output_size'])
     model['block'] = [dict() for _ in range(blocks)]
     
     # Setting general values

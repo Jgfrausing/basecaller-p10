@@ -13,20 +13,21 @@ import jkbc.files.torch_files as f
 import jkbc.utils.kd as kd
 import jkbc.utils.preprocessing as prep
 import jkbc.utils.postprocessing as pop
+import jkbc.utils as utils
+import jkbc.utils.bonito.tune as bonito
 
 BASE_DIR = '../..'
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-d", "--data_set", help="Path to preprossesed data folder", default=None)
+parser.add_argument("--data_set", help="Path to preprossesed data folder", default=None)
 parser.add_argument("-id", help="Identifier for run", default='3w9puesb')
 parser.add_argument("-s", help="stride", default=300)
 parser.add_argument("--save_teacher_output", help="Generate output for teacher", action='store_true')
 parser.add_argument("--make_fasta_files", help="Generate output for teacher", action='store_true')
 parser.add_argument("-bs", help="batch size",default=64)
-parser.add_argument("-d", help="device",default='gpu')
-parser.add_argument("--mapped_reads", help="Identifier for run", default=BASE_DIR/constants.MAPPED_READS)
-parser.add_argument("--bacteria", help="Bacteria dictionary", default=BASE_DIR/constants.BACTERIA_DICT_PATH)
+parser.add_argument("--device", help="device",default='cuda')
+parser.add_argument("--bacteria", help="Bacteria dictionary", default=f'{BASE_DIR}/{constants.BACTERIA_DICT_PATH}')
 
 args = parser.parse_args()
 
@@ -36,8 +37,8 @@ config = wandb.restore('config.yaml', run_path=f"kbargsteen/basecaller-p10-nbs_m
 with open(config.name, 'r') as config_file:
     config = yaml.load(config_file, Loader=yaml.FullLoader)
 
-preprocessed_data = args.d
-with open(preprocessed_data/'config.json', 'r') as fp:
+preprocessed_data = args.data_set
+with open(f'{preprocessed_data}/config.json', 'r') as fp:
     data_config = json.load(fp)
     window_size    = int(data_config['maxw']) #maxw = max windowsize
     dimensions_out = int(data_config['maxl']) # maxl = max label length
@@ -45,11 +46,15 @@ with open(preprocessed_data/'config.json', 'r') as fp:
 
 alphabet       = config['alphabet']
 stride         = int(args.s)
-device         = torch.device(args.d)
+device         = torch.device(args.device)
 
 # +
 # Model
-model, _ = factory.bonito(config.window_size, device, model_config)
+model_params = utils.get_nested_dict(config, 'model_params')['value']
+print(model_params)
+model_config = bonito.get_bonito_config(model_params)
+
+model, _ = factory.bonito(config['window_size'], device, model_config)
 predicter = m.get_predicter(model, device).to_fp16()
 
 weights = wandb.restore('bestmodel.pth', run_path=f"kbargsteen/basecaller-p10-nbs_models/{args.id}")

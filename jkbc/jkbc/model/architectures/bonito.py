@@ -46,11 +46,12 @@ class Model(nn.Module):
         self.features = config['block'][-1]['filters']
         self.encoder = Encoder(config)
         self.decoder = Decoder(self.features, len(self.alphabet))
+        
         if 'output_size' not in config or not config['output_size']:
             self.compressor = None
             print('No compression')
         else:
-            self.compressor = self.compressor(1366, config['output_size'], 15)
+            self.compressor = Compressor(1366, config['output_size'], 15, self.alphabet)
             print('Using compression')
 
     def forward(self, x):
@@ -60,13 +61,18 @@ class Model(nn.Module):
             return self.compressor(decoded)
         return decoded
     
-    def compressor(self, input_size, output_size, kernel_size, stride=1, dilation=1):
-        padding = _get_padding(kernel_size, stride, dilation, len(self.alphabet))
+class Compressor(nn.Module):
+    def __init__(self, input_size, output_size, kernel_size, alphabet):
+        super(Compressor, self).__init__()
+        padding = _get_padding(kernel_size, 1, 1, len(alphabet))
         self.layer = nn.Sequential(
-             nn.Conv1d(input_size, output_size, kernel_size, stride=stride, padding=padding)
+             nn.Conv1d(input_size, output_size, kernel_size, stride=1, padding=padding)
             ,nn.BatchNorm1d(output_size)
             ,nn.ReLU()
         )
+        
+    def forward(self, x):
+        return self.layer(x)
 
 class Encoder(nn.Module):
     """

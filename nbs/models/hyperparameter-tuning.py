@@ -19,20 +19,12 @@ import jkbc.files.torch_files as f
 import jkbc.model.metrics as metric
 import jkbc.utils.preprocessing as prep
 import jkbc.utils.bonito.tune as bonito
-
-# +
-def get_nested_dict(config, key):
-    res = config[key]
-    for k, v in dict(config).items():
-        if '.' in k and k.split('.')[0] == key:
-            inner_key = k.split('.')[1]
-            res[inner_key] = v
-    return res
+import jkbc.utils as utils
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-d", "--data_set", help="Override data set from config", default=None)
+parser.add_argument("--data_set", help="Override data set from config", default=None)
 parser.add_argument("-id", help="Identifier for run", default=None)
-parser.add_argument("-s", "--output size", help="size of last layer in network", default=None)
+parser.add_argument("-s", "--output_size", help="size of last layer in network", default=None)
 args = parser.parse_args()
 
 # +
@@ -51,9 +43,6 @@ wandb.run.save()
 # fix to issue https://github.com/wandb/client/issues/982
 config = wandb.config
 config.id = wandb.run.id
-if args.d:
-    config.data_set = args.d
-    print('Data set used:', args.d)
     
 print(f'Resumed: {wandb.run.resumed}\nId: {config.id}\nDevice: {config.device}')
 
@@ -61,8 +50,13 @@ print(f'Resumed: {wandb.run.resumed}\nId: {config.id}\nDevice: {config.device}')
 # Setting constants using config
 BASE_DIR = Path("../..")
 PATH_DATA = 'data/feather-files'
+if args.data_set:
+    data_set = args.data_set
+    print('Data set used:', args.data_set)
+else:
+    data_set = config['data_set']
 
-DATA_SET = BASE_DIR/PATH_DATA/config['data_set']
+DATA_SET = BASE_DIR/PATH_DATA/data_set
 
 with open(DATA_SET/'config.json', 'r') as fp:
     data_config = json.load(fp)
@@ -76,9 +70,10 @@ ALPHABET_SIZE     = len(ALPHABET_VAL)
 
 # +
 # get model
-model_params = get_nested_dict(config, 'model_params')
-model_config = bonito.get_bonito_config(config.model_params)
-model_config['output_size'] = args.s
+config['model_params.output_size'] = int(args.output_size)
+model_params = utils.get_nested_dict(config, 'model_params')
+
+model_config = bonito.get_bonito_config(model_params)
 
 model, config.dimensions_out_scale = factory.bonito(config.window_size, config.device, model_config)
     
