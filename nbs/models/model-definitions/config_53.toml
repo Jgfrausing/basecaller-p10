@@ -1,0 +1,89 @@
+model = "QuartzNet"
+[[block]]
+filters = 21
+repeat = 1
+kernel = [ 73,]
+stride = [ 3,]
+dilation = [ 1,]
+dropout = 0.0
+residual = false
+separable = false
+
+[[block]]
+filters = 32
+repeat = 9
+kernel = [ 3,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = true
+separable = true
+
+[[block]]
+filters = 3
+repeat = 5
+kernel = [ 67,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = true
+separable = true
+
+[[block]]
+filters = 20
+repeat = 1
+kernel = [ 93,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = true
+separable = true
+
+[[block]]
+filters = 98
+repeat = 1
+kernel = [ 97,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = true
+separable = true
+
+[[block]]
+filters = 3
+repeat = 9
+kernel = [ 33,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = true
+separable = true
+
+[[block]]
+filters = 90
+repeat = 1
+kernel = [ 35,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = false
+separable = true
+
+[[block]]
+filters = 383
+repeat = 1
+kernel = [ 13,]
+stride = [ 1,]
+dilation = [ 1,]
+dropout = 0.0
+residual = false
+separable = false
+
+[labels]
+labels = [ "N", "A", "C", "G", "T",]
+
+[input]
+features = 1
+
+[encoder]
+activation = "gelu"

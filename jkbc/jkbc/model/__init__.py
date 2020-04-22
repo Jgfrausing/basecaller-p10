@@ -11,11 +11,11 @@ import jkbc.types as t
 import jkbc.utils.postprocessing as pop
 
 
-def get_predicter(model, model_dir, device):
+def get_predicter(model, device, root_dir):
     _empty_tensor = TensorDataset(torch.zeros(1))
     _dl = DataLoader(_empty_tensor)
     databunch = DataBunch(_dl, _dl, device=device)
-    return Learner(databunch, model, model_dir=model_dir)
+    return Learner(databunch, model, model_dir=root_dir)
 
 
 def predict_and_assemble(model, x: t.Tensor, alphabet: str, window_size, stride, beam_size = 25, beam_threshold=0.1) -> t.Tuple[str, t.Tensor2D]:
@@ -116,4 +116,8 @@ def save_setup(model_dir, model, data_set, knowlegde_distillation, teacher, batc
     toml_string = toml.dumps(obj)
     with open(f'{model_dir}/definition.toml', 'w') as f:
         f.writelines(toml_string)
-    
+
+
+def get_parameter_count(model):
+    return sum(p.numel() for p in model.parameters())
+

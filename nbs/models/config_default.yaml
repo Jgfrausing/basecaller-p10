@@ -1,0 +1,66 @@
+data_set: Range0-1000-FixLabelLen400-winsize4096
+alphabet:
+  0: '-'
+  1: A
+  2: C
+  3: G
+  4: T
+max_paramters: 6678533333 #6678533 # bonito size
+batch_size: 170
+cycle: 4
+device: 'cuda'
+drop_last: true
+dropout: 0.1
+epochs: 50
+knowledge_distillation: false
+kd_alpha: 0.5
+kd_temperature: 20
+learning_rate: 0.001
+learning_rate_min: 0
+model_params:
+  b1_dilation: 1
+  b1_filters: 256
+  b1_kernel: 33
+  b1_repeat: 5
+  b1_groups: 1
+  b1_shuffle: false
+  b2_dilation: 1
+  b2_filters: 256
+  b2_kernel: 39
+  b2_repeat: 5
+  b2_groups: 1
+  b2_shuffle: false
+  b3_dilation: 1
+  b3_filters: 512
+  b3_kernel: 51
+  b3_repeat: 5
+  b3_groups: 1
+  b3_shuffle: false
+  b4_dilation: 1
+  b4_filters: 512
+  b4_kernel: 63
+  b4_repeat: 5
+  b4_groups: 1
+  b4_shuffle: false
+  b5_dilation: 1
+  b5_filters: 512
+  b5_kernel: 75
+  b5_repeat: 5
+  b5_groups: 1
+  b5_shuffle: false
+  b_blocks: 5
+  c1_filters: 256
+  c1_kernel: 33
+  c1_stride: 3
+  c2_filters: 512
+  c2_kernel: 87
+  c3_filters: 1024
+  c3_kernel: 1
+  dropout: 0.0
+momentum: 0.0
+optimizer: AdamW
+pretrained_weights: null
+scheduler: none
+teacher_name: bonito
+weight_decay: 0.1
+
