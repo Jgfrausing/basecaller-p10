@@ -17,7 +17,6 @@ def model(window_size, device, definition: t.Union[dict, t.PathLike]):
         config = toml.load(definition)
     
     model = Model(config).to(device=device).half()
-    
     test_input = torch.ones(1, 1, window_size, dtype=torch.float16, device=device)
     test_output = model(test_input)
     out_dimension = test_output.shape[1]
@@ -51,7 +50,8 @@ class Model(nn.Module):
             self.compressor = None
             print('No compression')
         else:
-            self.compressor = Compressor(1366, config['output_size'], 15, self.alphabet)
+            bonito_output = 1366
+            self.compressor = Compressor(bonito_output, config['output_size'])
             print('Using compression')
 
     def forward(self, x):
@@ -62,18 +62,24 @@ class Model(nn.Module):
         return decoded
     
 class Compressor(nn.Module):
-    def __init__(self, input_size, output_size, kernel_size, alphabet):
+    def __init__(self, input_size, output_size):
         super(Compressor, self).__init__()
-        padding = _get_padding(kernel_size, 1, 1, len(alphabet))
-        self.layer = nn.Sequential(
-             nn.Conv1d(input_size, output_size, kernel_size, stride=1, padding=padding)
-            ,nn.BatchNorm1d(output_size)
+        self.layer = nn.Linear(input_size, output_size)
+        self.activation = nn.Sequential(
+            nn.BatchNorm1d(input_size)
             ,nn.ReLU()
         )
         
     def forward(self, x):
-        return self.layer(x)
+        x_ = self.activation(x)
+        x_ = self.__transpose(x_)
+        x_ = self.layer(x_)
+        return self.__transpose(x_)
 
+    def __transpose(self, x):
+        a, b, c = x.shape[0], x.shape[1], x.shape[2]
+        return x.reshape(a, c, b)
+    
 class Encoder(nn.Module):
     """
     Builds the model encoder

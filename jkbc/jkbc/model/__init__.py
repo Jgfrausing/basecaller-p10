@@ -11,11 +11,11 @@ import jkbc.types as t
 import jkbc.utils.postprocessing as pop
 
 
-def get_predicter(model, device):
+def get_predicter(model, device, root_dir):
     _empty_tensor = TensorDataset(torch.zeros(1))
     _dl = DataLoader(_empty_tensor)
     databunch = DataBunch(_dl, _dl, device=device)
-    return Learner(databunch, model)
+    return Learner(databunch, model, model_dir=root_dir)
 
 
 def predict_and_assemble(model, x: t.Tensor, alphabet: str, window_size, stride, beam_size = 25, beam_threshold=0.1) -> t.Tuple[str, t.Tensor2D]:

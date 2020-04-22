@@ -30,12 +30,14 @@ parser.add_argument("--device", help="device",default='cuda')
 parser.add_argument("--bacteria", help="Bacteria dictionary", default=f'{BASE_DIR}/{constants.BACTERIA_DICT_PATH}')
 
 args = parser.parse_args()
+root_dir = f'tmp/{args.id}'
 
 # +
 # Parameters
-config = wandb.restore('config.yaml', run_path=f"kbargsteen/basecaller-p10-nbs_models/{args.id}")
+config = wandb.restore('config.yaml', run_path=f"kbargsteen/basecaller-p10-nbs_models/{args.id}", replace=True, root=root_dir)
 with open(config.name, 'r') as config_file:
     config = yaml.load(config_file, Loader=yaml.FullLoader)
+
 
 preprocessed_data = args.data_set
 with open(f'{preprocessed_data}/config.json', 'r') as fp:
@@ -51,13 +53,12 @@ device         = torch.device(args.device)
 # +
 # Model
 model_params = utils.get_nested_dict(config, 'model_params')['value']
-print(model_params)
 model_config = bonito.get_bonito_config(model_params)
 
-model, _ = factory.bonito(config['window_size'], device, model_config)
-predicter = m.get_predicter(model, device).to_fp16()
+model, _ = factory.bonito(config['window_size']['value'], device, model_config)
+predicter = m.get_predicter(model, device, '').to_fp16()
 
-weights = wandb.restore('bestmodel.pth', run_path=f"kbargsteen/basecaller-p10-nbs_models/{args.id}")
+weights = wandb.restore('bestmodel.pth', run_path=f"kbargsteen/basecaller-p10-nbs_models/{args.id}", replace=True, root=root_dir)
 # fastai requires the name without .pth
 model_weights = '.'.join(weights.name.split('.')[:-1])
 predicter.load(model_weights)
@@ -65,13 +66,13 @@ model_weights
 
 
 # +
-def save_teacher_output(path, model_id, data, model, bs):
+def save_teacher_output(path, model_id, model, bs, device):
     # Read data from feather
     data = f.load_training_data(path)
-    kd.generate_and_save_y_teacher(path, model_id, m.signal_to_input_tensor(data.x, DEVICE), model, bs=bs)
+    kd.generate_and_save_y_teacher(path, model_id, m.signal_to_input_tensor(data.x, device), model, bs=bs)
 
 if args.save_teacher_output:
-    save_teacher_output(preprocessed_data, args.id, data, predicter.model, bs)
+    save_teacher_output(preprocessed_data, args.id, predicter.model, args.bs, device)
 
 # +
 def get_accuracies(model_id, data_set, mapped_reads, bacteria_dict, labels_per_window, stride, window_size, alphabet, device, prediction_count):

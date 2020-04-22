@@ -25,6 +25,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--data_set", help="Override data set from config", default=None)
 parser.add_argument("-id", help="Identifier for run", default=None)
 parser.add_argument("-s", "--output_size", help="size of last layer in network", default=None)
+parser.add_argument("--epochs", help="Number of epochs", default=None)
 args = parser.parse_args()
 
 # +
@@ -70,7 +71,8 @@ ALPHABET_SIZE     = len(ALPHABET_VAL)
 
 # +
 # get model
-config['model_params.output_size'] = int(args.output_size)
+
+config['model_params']['output_size'] = int(args.output_size) if args.output_size else None
 model_params = utils.get_nested_dict(config, 'model_params')
 
 model_config = bonito.get_bonito_config(model_params)
@@ -78,7 +80,7 @@ model_config = bonito.get_bonito_config(model_params)
 model, config.dimensions_out_scale = factory.bonito(config.window_size, config.device, model_config)
     
 config.parameters = m.get_parameter_count(model)
-
+wandb.run.save()
 if config.max_paramters < config.parameters:
     raise ValueError("Too many parameters ({paramaters})")
 
@@ -121,6 +123,7 @@ if wandb.run.resumed:
 # -
 
 # Train
+epochs = args.epochs if args.epochs else config.epochs
 learner.fit(config.epochs, lr=config.learning_rate, wd=config.weight_decay)
 
 

@@ -11,7 +11,7 @@ cycle: 4
 device: 'cuda'
 drop_last: true
 dropout: 0.1
-epochs: 2
+epochs: 50
 knowledge_distillation: false
 kd_alpha: 0.5
 kd_temperature: 20
