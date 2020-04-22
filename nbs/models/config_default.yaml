@@ -22,22 +22,32 @@ model_params:
   b1_filters: 256
   b1_kernel: 33
   b1_repeat: 5
+  b1_groups: 1
+  b1_shuffle: false
   b2_dilation: 1
   b2_filters: 256
   b2_kernel: 39
   b2_repeat: 5
+  b2_groups: 1
+  b2_shuffle: false
   b3_dilation: 1
   b3_filters: 512
   b3_kernel: 51
   b3_repeat: 5
+  b3_groups: 1
+  b3_shuffle: false
   b4_dilation: 1
   b4_filters: 512
   b4_kernel: 63
   b4_repeat: 5
+  b4_groups: 1
+  b4_shuffle: false
   b5_dilation: 1
   b5_filters: 512
   b5_kernel: 75
   b5_repeat: 5
+  b5_groups: 1
+  b5_shuffle: false
   b_blocks: 5
   c1_filters: 256
   c1_kernel: 33

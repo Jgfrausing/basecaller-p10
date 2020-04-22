@@ -20,6 +20,8 @@ def get_bonito_config(config: t.Dict):
         block['dropout'] = config['dropout']
         block['residual'] = False
         block['separable'] = False
+        block['groups'] = 1
+        block['shuffle'] = False
     
     model['labels'] =  dict()
     model['labels']['labels'] = ["N", "A", "C", "G", "T"]

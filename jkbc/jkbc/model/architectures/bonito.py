@@ -93,8 +93,8 @@ class Encoder(nn.Module):
                     repeat=layer['repeat'], kernel_size=layer['kernel'],
                     stride=layer['stride'], dilation=layer['dilation'],
                     dropout=layer['dropout'], residual=layer['residual'],
-                    separable=layer['separable'], groups=self.config['groups'], 
-                    shuffle=self.config['shuffle']
+                    separable=layer['separable'], groups=layer['groups'], 
+                    shuffle=layer['shuffle']
                 )
             )
 
@@ -115,6 +115,9 @@ class TCSConv1d(nn.Module):
         super(TCSConv1d, self).__init__()
         self.separable = separable
         
+        if groups > 1 and not separable:
+            raise ValueError("Grouping should only be used with separable convolutions.")
+        
         self.groups = groups
         self.shuffle = shuffle
 
@@ -129,10 +132,9 @@ class TCSConv1d(nn.Module):
                 dilation=dilation, bias=bias, padding=0, groups=groups
             )
         else:
-            # I don't know if it makes sense to group non-separable convs
             self.conv = nn.Conv1d(
                 in_channels, out_channels, kernel_size=kernel_size,
-                stride=stride, padding=padding, dilation=dilation, bias=bias, groups=groups
+                stride=stride, padding=padding, dilation=dilation, bias=bias
             )
 
     def forward(self, x):
@@ -143,9 +145,8 @@ class TCSConv1d(nn.Module):
             x = self.conv(x)
             
         if self.shuffle and self.groups > 1:
-            print("I'm shuffling!")
-            x = shuffle_channels(x, self.groups)
-            
+            x = _shuffle_channels(x, self.groups)
+
         return x
 
 
@@ -248,7 +249,8 @@ def _get_padding(kernel_size, stride, dilation, features):
 
 
 def _shuffle_channels(x: torch.Tensor, groups:int) -> torch.Tensor:
-    # From: https://github.com/pytorch/vision/blob/d6ee8757eca7b74b98e5f0d434a565eb7b1c410b/torchvision/models/shufflenetv2.py#L19
+    # Based on ShuffleNet: https://arxiv.org/abs/1707.01083 with this particular implementation:
+    # https://github.com/pytorch/vision/blob/d6ee8757eca7b74b98e5f0d434a565eb7b1c410b/torchvision/models/shufflenetv2.py#L19
     batchsize, num_channels, feature_count = x.data.size()
     channels_per_group = num_channels // groups
 
