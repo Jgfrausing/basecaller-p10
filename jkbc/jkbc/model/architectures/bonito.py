@@ -87,7 +87,8 @@ class Encoder(nn.Module):
                     repeat=layer['repeat'], kernel_size=layer['kernel'],
                     stride=layer['stride'], dilation=layer['dilation'],
                     dropout=layer['dropout'], residual=layer['residual'],
-                    separable=layer['separable'],
+                    separable=layer['separable'], groups=self.config['groups'], 
+                    shuffle=self.config['shuffle']
                 )
             )
 
@@ -103,10 +104,13 @@ class TCSConv1d(nn.Module):
     """
     Time-Channel Separable 1D Convolution
     """
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=False, separable=False):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, shuffle=False, bias=False, separable=False):
 
         super(TCSConv1d, self).__init__()
         self.separable = separable
+        
+        self.groups = groups
+        self.shuffle = shuffle
 
         if separable:
             self.depthwise = nn.Conv1d(
@@ -116,12 +120,13 @@ class TCSConv1d(nn.Module):
 
             self.pointwise = nn.Conv1d(
                 in_channels, out_channels, kernel_size=1, stride=stride,
-                dilation=dilation, bias=bias, padding=0
+                dilation=dilation, bias=bias, padding=0, groups=groups
             )
         else:
+            # I don't know if it makes sense to group non-separable convs
             self.conv = nn.Conv1d(
                 in_channels, out_channels, kernel_size=kernel_size,
-                stride=stride, padding=padding, dilation=dilation, bias=bias
+                stride=stride, padding=padding, dilation=dilation, bias=bias, groups=groups
             )
 
     def forward(self, x):
@@ -130,6 +135,11 @@ class TCSConv1d(nn.Module):
             x = self.pointwise(x)
         else:
             x = self.conv(x)
+            
+        if self.shuffle and self.groups > 1:
+            print("I'm shuffling!")
+            x = shuffle_channels(x, self.groups)
+            
         return x
 
 
@@ -137,7 +147,7 @@ class Block(nn.Module):
     """
     TCSConv, Batch Normalisation, Activation, Dropout
     """
-    def __init__(self, in_channels, out_channels, activation, repeat=5, kernel_size=1, stride=1, dilation=1, dropout=0.0, residual=False, separable=False):
+    def __init__(self, in_channels, out_channels, activation, repeat=5, kernel_size=1, stride=1, dilation=1, dropout=0.0, residual=False, separable=False, groups=1, shuffle=False):
 
         super(Block, self).__init__()
 
@@ -153,7 +163,8 @@ class Block(nn.Module):
                 self.get_tcs(
                     _in_channels, out_channels, kernel_size=kernel_size,
                     stride=stride, dilation=dilation,
-                    padding=padding, separable=separable
+                    padding=padding, separable=separable,
+                    groups=groups, shuffle=shuffle
                 )
             )
 
@@ -180,12 +191,13 @@ class Block(nn.Module):
     def get_activation(self, activation, dropout):
         return activation, nn.Dropout(p=dropout)
 
-    def get_tcs(self, in_channels, out_channels, kernel_size=1, stride=1, dilation=1, padding=0, bias=False, separable=False):
+    def get_tcs(self, in_channels, out_channels, kernel_size=1, stride=1, dilation=1, padding=0, bias=False, separable=False, groups=1, shuffle=False):
         return [
             TCSConv1d(
                 in_channels, out_channels, kernel_size,
                 stride=stride, dilation=dilation, padding=padding,
-                bias=bias, separable=separable
+                bias=bias, separable=separable, groups=groups, 
+                shuffle=shuffle
             ),
             nn.BatchNorm1d(out_channels, eps=1e-3, momentum=0.1)
         ]
@@ -227,3 +239,20 @@ def _get_padding(kernel_size, stride, dilation, features):
     padding = (dilated_kernel_size+features*stride-features)//2
 
     return padding
+
+
+def _shuffle_channels(x: torch.Tensor, groups:int) -> torch.Tensor:
+    # From: https://github.com/pytorch/vision/blob/d6ee8757eca7b74b98e5f0d434a565eb7b1c410b/torchvision/models/shufflenetv2.py#L19
+    batchsize, num_channels, feature_count = x.data.size()
+    channels_per_group = num_channels // groups
+
+    # reshape
+    x = x.view(batchsize, groups,
+               channels_per_group, feature_count)
+
+    x = torch.transpose(x, 1, 2).contiguous()
+
+    # flatten
+    x = x.view(batchsize, -1, feature_count)
+
+    return x
