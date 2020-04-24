@@ -13,15 +13,15 @@ ANNEALING_COS = 'annealing_cos'
 ANNEALING_COS_WARMRESTART = 'annealing_cos_warmrestart'
 
 
-def get_scheduler(config) -> t.Callable[[fastai.basic_train.Learner], None]:
+def get_scheduler(config, epochs) -> t.Callable[[fastai.basic_train.Learner], None]:
     if NONE == config.scheduler:
         return lambda learn : None
     elif ONE_CYCLE == config.scheduler:
-        return attach_one_cycle_scheduler(epochs=config.epochs, min_lr=config.learning_rate_min, max_lr=config.learning_rate)
+        return attach_one_cycle_scheduler(epochs=epochs, min_lr=config.learning_rate_min, max_lr=config.learning_rate)
     elif ANNEALING_COS == config.scheduler:
-        return attach_annealing_cos_scheduler(epochs=config.epochs, min_lr=config.learning_rate_min, max_lr=config.learning_rate)
+        return attach_annealing_cos_scheduler(epochs=epochs, min_lr=config.learning_rate_min, max_lr=config.learning_rate)
     elif ANNEALING_COS_WARMRESTART == config.scheduler:
-        return attach_annealing_cos_warmrestart_scheduler(epochs=config.epochs, min_lr=config.learning_rate_min, max_lr=config.learning_rate,
+        return attach_annealing_cos_warmrestart_scheduler(epochs=epochs, min_lr=config.learning_rate_min, max_lr=config.learning_rate,
                                              mom=config.momentum, n_cycles=config.cycle)
     else: raise NotImplementedError(f"{config.scheduler} scheduler not implemented")
 

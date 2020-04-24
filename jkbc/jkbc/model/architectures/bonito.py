@@ -160,7 +160,8 @@ class Block(nn.Module):
     """
     TCSConv, Batch Normalisation, Activation, Dropout
     """
-    def __init__(self, in_channels, out_channels, activation, repeat=5, kernel_size=1, stride=1, dilation=1, dropout=0.0, residual=False, separable=False, groups=1, shuffle=False):
+    def __init__(self, in_channels, out_channels, activation, repeat=5, kernel_size=1, stride=1, dilation=1,
+                 dropout=0.0, residual=False, separable=False, groups=1, shuffle=False):
 
         super(Block, self).__init__()
 
@@ -240,9 +241,10 @@ class Decoder(Module):
 # -
 
 def _get_padding(kernel_size, stride, dilation, features):
+    
     # https://www.quora.com/How-can-I-calculate-the-size-of-output-of-convolutional-layer
     if stride == 1 and kernel_size%2 == 0:
-        raise ValueError(f"stride ({stride}) and kernel_size ({kernel_size}) cannot be padded to contain input size")
+        raise ValueError(f"stride of ({stride}) and even sized kernel ({kernel_size}) cannot be padded to retain input size")
 
     #Dilation simulates an increased kernel size (where we ignore the zeros)
     #This means that kernel_size 5 and dilation 1 is similiar to kernel size 3 and dilation 2 regardig how much to pad

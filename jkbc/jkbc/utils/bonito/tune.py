@@ -3,10 +3,18 @@ import jkbc.types as t
 import uuid
 import hashlib
 def get_bonito_config(config: t.Dict):
+    def convert_kernel_sizes(model_params):
+        for k, v in model_params.items():
+            if 'kernel' in k:
+                model_params[k] = v*2+1
+        return model_params
+
+    config = convert_kernel_sizes(config)
+    
     blocks = 3 + config['b_blocks']
     values_str = ''.join([str(val) for val in config.values()])
     hashed = hashlib.md5(values_str.encode()).hexdigest()
-    model = dict(model = hashed, output_size = config['output_size'])
+    model = dict(model = hashed, output_size = config['scale_output_to_size'])
     model['block'] = [dict() for _ in range(blocks)]
     
     # Setting general values

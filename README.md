@@ -50,7 +50,7 @@ $ ssh <username>@ai-pilot.srv.aau.dk
     * While being on the AAU network, connect to: `http://nv-ai-<id>.srv.aau.dk:<port>/lab?token=<token>`
 14. Choose the correct kernel for your notebooks, i.e. the `jkbc` kernel that we created earlier.
 
-
+<!-- #region -->
 ### Walk-through: Subsequent runs
 1. Connect to the AAU VPN.
 2. SSH into the CLAAUDIA frontend: `ssh <username>@ai-pilot.srv.aau.dk`
@@ -69,18 +69,7 @@ $ ssh <username>@ai-pilot.srv.aau.dk
    `http://nv-ai-<id>.srv.aau.dk:<port>/lab?token=<token>`
 8. Remember to choose the correct *kernel* for your notebooks (jkbc).
 
-### Keep jupyter running
-It is important, that you keep the tab open in order to be able to continue execution.
-([By default a job is limited to 2 days, see other options here](#multiple-gpus-and-long-runs))
-1. Detach from the tmux running jupyter: `Ctrl + b` + `d`
-2. Disconnect from the aau connection: `exit`
-3. Turn of VPN
-#### Reconnecting
-1. Log into VPN and ssh into aau
-2. Reconnect kernel by `Kernel` -> `Reconnect kernel`
-
-
-### Multiple GPUs and Long Runs
+#### Multiple GPUs and Long Runs
 1. There are several options for running a job with multiple GPUs or for a long time. :
   * They can be viewed inside the CLAAUDIA Frontend by running `sacctmgr show qos format=name,maxtresperuser,maxwalldurationperjob`
   * Which outputs:
@@ -96,49 +85,58 @@ It is important, that you keep the tab open in order to be able to continue exec
   * For a long run, you will have to use the `1gpulong` Quality Of Service (qos) option.
   * Note the max gpu limits per type of qos.
 
+
+### Keep jupyter running
+It is important, that you keep the tab open in order to be able to continue execution.
+([By default a job is limited to 2 days, see other options here](#multiple-gpus-and-long-runs))
+1. Detach from the tmux running jupyter: `Ctrl + b` + `d`
+2. Disconnect from the aau connection: `exit`
+3. Turn of VPN
+
+#### Reconnecting
+1. Log into VPN and ssh into aau
+2. Reconnect kernel by `Kernel` -> `Reconnect kernel`
+<!-- #endregion -->
+
+<!-- #region -->
+# Train a model
+Weights and Biases (wandb) helps to structure our runs and data.
+## Specific model
+Training a new model can be done with: `python -m fire train run`
+* This will load the default config (Bonito) and train a new model
+* `python -m fire train run --help` will give a list of optional parameters that can be parsed along.
+    * if --id is set, then you will resume an existing run, if one exists.
+    * --new=True uses the setup from the specified run (id) but creates a new run.
+    * --config gives a specific config (.yaml) to use
+
+## Sweep
+wandb provides sweeps, that can be used to do hyperparameter tuning.
+To start a new sweep:
+* Go to `project > sweeps > create sweep`
+* Paste in the content of `nbs/models/sweep.yaml`, modify as needed, and press `Initialize sweep`
+* Copy the command provided and run `CUDA_VISIBLE_DEVICES=0 command`, where `0` can be any available GPU.
+
 ---
 
 ## Conda Environment Files
 * Save your conda environment to a file: `conda env export | grep -v "^prefix: " > <NAME_OF_FILE>.yml`
 * Create a new conda environment using a file: `conda env create -f <NAME_OF_FILE>.yml`
 
-## Make new basecaller
-A script is created to ensure the correct structure of the notebook. This makes experimentation with models easier.
 
-The following practices should be adhered to:
-* Run `./new-basecaller <name-of-basecaller>` to create a new basecaller
-    * This will create a folder in *models-nbk* with the given name, and a notebook within that folder.
-* The field under *Build* should be the only place that differs between notebooks. 
-    * This makes it easier to adjust for changes made in pre- or post-processing, if needed.
-* The models are saved and loaded using the name of the notebook.
-    * Rename the notebook whenever changes are made and a new model is trained
-        * Run `git co -- <name-of-old-notebook>.ipynb`
-        * and `git add <name-of-new-notebook>.ipynb`
-        * this ensures that both versions of the model are saved and their traind weights can be loaded
-
-## Make and load training data
+## Make training data
 We created a script that reads hdf5 files, and saves training data into feather files. This greatly improves the speed that data is loaded into memory, and skips a lot of the preprocessing. 
 ### Make
 1. Activate conda environment: `conda activate jkbc`
-2. Run `python [path to make_feather_file.py] [path to data] [OPTIONS]`
+2. Run `python [path to make_training_data.py] [path to data] [OPTIONS]`
     * By default the script will create a small example and save it to data/feather-files/
-    * The following options can be applied:
-        - `--f [number]` and `--t [number]`: The range of signals to be used (default 0 and 5)
-        - `--ll`: The fixed size of the labels (default 70)
-        - `--o`: Override the path to save the files
-        - `-run_test`: Runs a test that ensures that saved data equals loaded data
     * To avoid defining where the save the files, run the script from the root of this project
-        - `python jkbc/jkbc/utils/make_feather_file.py [path to data] [OPTIONS]`
-3. The script creates a folder named `Range0-50-FixLabelLen70`
-    * Where:
-        - 0 corresponds to the `--f` parameter
-        - 50 corresponds to the `--t` parameter
-        - 70 corresponds to the `--ll` parameter
-    * Within the folder lies the files:
-        - x (input data)
-        - y (labels)
+        - `python scripts/make_training_data.py [path to data] [OPTIONS]`
+
+### Teacher data
+TODO
 
 ## Common Errors
 * `AssertionError: Default process group is not initialized` while training
    - This occurs when PyTorch is trying to train in a distributed fashion, fx via several GPUs
    - If you don't want it to be distributed, run the following code: `import os; os.environ['WORLD_SIZE'] = '0'`
+<!-- #endregion -->

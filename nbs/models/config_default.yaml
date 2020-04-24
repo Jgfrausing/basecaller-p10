@@ -1,5 +1,4 @@
-# 8353797 default size after padding + groups added
-max_parameters: 8353797 #6678533 # bonito size 
+max_parameters: 6678533 # bonito size
 cycle: 4
 drop_last: true
 knowledge_distillation: true
