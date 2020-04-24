@@ -1,7 +1,7 @@
 # Custom
 dataset.pickle
 data/
-nbs/models/*/weights
+*/*.pth
 p9/
 scripts/images/
 nbs/models/hyper/
