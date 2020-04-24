@@ -88,7 +88,7 @@ class ErrorRate(Callback):
         return add_metrics(last_metrics, self.val/self.count)
 
 
-def ctc_accuracy(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0, batch_slice:int = 20) -> functools.partial:
+def read_identity(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0, batch_slice:int = 20) -> functools.partial:
     """CTC accuracy function to use with ErrorRate.
 
     Args:
@@ -99,7 +99,7 @@ def ctc_accuracy(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0
     Returns:
         Average Rates.error for the considered windows
     """
-    def ctc_accuracy(alphabet_val, alphabet_str, beam_size, threshold, batch_slice, last_output, last_target, **kwargs):
+    def read_identity(alphabet_val, alphabet_str, beam_size, threshold, batch_slice, last_output, last_target, **kwargs):
         # last_target is a tuple of (y, x_lengths, y_lengths, and maybe a teacher))
         labels = last_target[0]
         
@@ -122,4 +122,4 @@ def ctc_accuracy(alphabet:t.Dict[int, str], beam_size:int = 2, threshold:int =.0
     
     alphabet_val = list(alphabet.values())
     alphabet_str = ''.join(alphabet_val)
-    return ErrorRate(partial(ctc_accuracy, alphabet_val, alphabet_str, beam_size, threshold, batch_slice))
+    return ErrorRate(partial(read_identity, alphabet_val, alphabet_str, beam_size, threshold, batch_slice))

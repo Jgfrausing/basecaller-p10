@@ -74,7 +74,7 @@ def run(data_set=DATA_SET, id=None, scale_output_to_size=None, epochs=10, new=Fa
     _kd_loss = metric.KdLoss(alpha=config.kd_alpha, temperature=config.kd_temperature, label_loss=_ctc_loss)
     loss = _kd_loss.loss() if config.knowledge_distillation else _ctc_loss.loss()
 
-    metrics = [metric.ctc_accuracy(ALPHABET, 5)]
+    metrics = [metric.read_identity(ALPHABET, 5)]
 
     # Load data   
     databunch = __load_data(config, data_set, device, batch_size)

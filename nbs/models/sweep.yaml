@@ -2,18 +2,14 @@ program: hyperparameter-tuning.py
 method: bayes
 metric:
   goal: maximize
-  name: ctc_accuracy
+  name: read_identity
 # early_terminate:
 #   type: hyperband
 #   eta: 3
 #   min_iter: 3
 parameters: 
-  data_set:
-    value: Range0-100-FixLabelLen400-winsize4096
   max_parameters:
     value: 5_000_000
-  epochs:
-    value: 5
   learning_rate:
     distribution: uniform
     max: 0.002
@@ -41,12 +37,6 @@ parameters:
     distribution: uniform
     max: 0.2
     min: 0.005
-  model_params.c1_stride:
-    values:
-    - 3
-    - 4
-    - 5
-
   model_params.b1_dilation:
     distribution: int_uniform
     min: 1
@@ -193,7 +183,8 @@ parameters:
   model_params.c2_kernel:
     distribution: int_uniform
     min:  16
-    max: 164  model_params.c3_filters:
+    max: 164  
+  model_params.c3_filters:
     distribution: int_uniform
     min: 128
     max: 512
@@ -202,6 +193,6 @@ parameters:
     min: 16
     max: 64
   model_params.dropout:
-    distribution: int_uniform
+    distribution: uniform
     min: 0.0
     max: 0.5
