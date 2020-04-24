@@ -1,4 +1,4 @@
-program: hyperparameter-tuning.py
+program: train.py
 method: bayes
 metric:
   goal: maximize
@@ -182,8 +182,8 @@ parameters:
     max: 512
   model_params.c2_kernel:
     distribution: int_uniform
-    min:  16
-    max: 164  
+    min: 16
+    max: 64 
   model_params.c3_filters:
     distribution: int_uniform
     min: 128
