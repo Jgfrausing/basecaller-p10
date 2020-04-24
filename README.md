@@ -116,6 +116,10 @@ To start a new sweep:
 * Paste in the content of `nbs/models/sweep.yaml`, modify as needed, and press `Initialize sweep`
 * Copy the command provided and run `CUDA_VISIBLE_DEVICES=0 command`, where `0` can be any available GPU.
 
+To run multiple agents for a sweep run: `scripts/runsweep.sh 4 "command"`
+
+To kill all agent process on the GPU run: `nvidia-smi | grep 'python' | awk '{ print $3 }' | xargs -n1 kill -9`
+
 ---
 
 ## Conda Environment Files

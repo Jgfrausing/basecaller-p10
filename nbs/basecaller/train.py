@@ -28,7 +28,7 @@ DEFAULT_CONFIG = 'config_default.yaml'
 DEVICE = m.get_available_gpu()
 
 
-def run(data_set=DATA_SET, id=None, scale_output_to_size=None, epochs=10, new=False, device=DEVICE, batch_size=170, config=DEFAULT_CONFIG):
+def run(data_set=DATA_SET, id=None, scale_output_to_size=None, epochs=10, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG):
     # Load default dictionary
     with open(config, 'r') as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
