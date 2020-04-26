@@ -118,7 +118,8 @@ To start a new sweep:
 
 To run multiple agents for a sweep run: `scripts/runsweep.sh 4 "command"`
 
-To kill all agent process on the GPU run: `nvidia-smi | grep 'python' | awk '{ print $3 }' | xargs -n1 kill -9`
+To kill all wandb agents: `ps aux | grep wandb agent | awk ' { print $2 } ' | xargs kill -9`
+* Todo: the kill script will try to kill the grep process, but it has ceased to exist when kill is called causing an error. (It still works though)
 
 ---
 
