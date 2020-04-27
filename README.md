@@ -118,7 +118,8 @@ To start a new sweep:
 
 To run multiple agents for a sweep run: `scripts/runsweep.sh 4 "command"`
 
-To kill all wandb agents: `ps aux | grep wandb agent | awk ' { print $2 } ' | xargs kill -9`
+To kill all wandb agents: `ps aux | grep wandb agent | awk ' { print $2 } ' | xargs kill -int`
+* This sends a KeyBoard interrupt to python. wandb catches this and handles stopping the process correctly.
 * Todo: the kill script will try to kill the grep process, but it has ceased to exist when kill is called causing an error. (It still works though)
 
 ---
