@@ -25,7 +25,7 @@ PROJECT = 'jk-basecalling'
 TEAM="jkbc"
 PROJECT_PATH = f'{TEAM}/{PROJECT}'
 DEFAULT_CONFIG = 'config_default.yaml'
-DEVICE = m.get_available_gpu()
+DEVICE = torch.device("cuda") #m.get_available_gpu()
 
 
 def run(data_set=DATA_SET, id=None, scale_output_to_size=None, epochs=10, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG):
