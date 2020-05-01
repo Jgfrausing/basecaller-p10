@@ -20,7 +20,7 @@ import jkbc.utils as utils
 
 BASE_DIR = Path("../..")
 PATH_DATA = 'data/feather-files'
-DATA_SET = BASE_DIR/PATH_DATA/'Range0-500-FixLabelLen400-winsize4096'
+DATA_SET = BASE_DIR/PATH_DATA/'Range0-10000-FixLabelLen400-winsize4096'
 PROJECT = 'jk-basecalling'
 TEAM="jkbc"
 PROJECT_PATH = f'{TEAM}/{PROJECT}'
@@ -28,16 +28,21 @@ DEFAULT_CONFIG = 'config_default.yaml'
 DEVICE = torch.device("cuda") #m.get_available_gpu()
 
 
-def run(data_set=DATA_SET, id=None, scale_output_to_size=None, epochs=10, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG):
+def run(data_set=DATA_SET, id=None, scale_output_to_size=None, epochs=20, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG):
     # Load default dictionary
     with open(config, 'r') as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
-
+    
     if id and not new: # Resume run from wandb
         wandb.init(config=config, resume='allow', id=id, entity=TEAM, project=PROJECT)
     else:              # Start new run
         wandb.init(config=config, resume='allow', entity=TEAM, project=PROJECT)
-
+    
+    # Use sweep to restart multiple existing runs using ids
+    if 'id' in wandb.config.keys():
+        new = True
+        id = wandb.config['id']
+    
     if new:
         # Load config from run specified
         config = wandb.restore('config.yaml', run_path=f"{PROJECT_PATH}/{id}", replace=True)
@@ -47,6 +52,7 @@ def run(data_set=DATA_SET, id=None, scale_output_to_size=None, epochs=10, new=Fa
         # Clean up dictionary
         config = {k: v['value'] for k, v in config.items() if k not in ['wandb_version', '_wandb']}
         wandb.config.update(config, allow_val_change=True)
+        wandb.config['started_from'] =  id
         wandb.run.save()
 
     config = wandb.config

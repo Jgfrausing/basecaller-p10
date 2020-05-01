@@ -1,0 +1,28 @@
+program: train.py
+method: grid
+metric:
+  goal: maximize
+  name: read_identity
+parameters:
+  id:
+    values:
+    - 6yd2fskw
+    - zovkvok2
+    - 2oxr5kdf
+    - j67zku83
+    - tv74lnby
+    - ztqs1lrk
+    - ywdbvl68
+    - 3zcpputl
+    - kewi5g7b
+    - 4nrzyikg
+    - ovidrq99
+    - rd8nzcur
+    - 3ma3tfw3
+    - bpveecn3
+    - jhwwcutw
+    - y886mbkd
+    - a7smayuz
+    - lyzedam8
+    - os0fvnju
+    - n7ijarel
