@@ -48,7 +48,6 @@ class Model(nn.Module):
         
         if 'output_size' not in config or not config['output_size']:
             self.compressor = None
-            print('No compression')
         else:
             bonito_output = 1366
             self.compressor = Compressor(bonito_output, config['output_size'])

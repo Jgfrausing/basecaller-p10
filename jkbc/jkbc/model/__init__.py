@@ -121,3 +121,10 @@ def save_setup(model_dir, model, data_set, knowlegde_distillation, teacher, batc
 def get_parameter_count(model):
     return sum(p.numel() for p in model.parameters())
 
+
+def time_model_prediction(model, device, count=20):
+    import timeit
+    signal = torch.ones(128, 4096, device=device)
+    input = signal_to_input_tensor(signal, device)
+    fn = lambda: model(input).detach().cpu()
+    return timeit.timeit(fn, number=count)

@@ -18,6 +18,7 @@ import jkbc.utils.preprocessing as prep
 import jkbc.utils.bonito.tune as bonito
 import jkbc.utils as utils
 
+# +
 BASE_DIR = Path("../..")
 PATH_DATA = 'data/feather-files'
 DATA_SET = BASE_DIR/PATH_DATA/'Range0-10000-FixLabelLen400-winsize4096'
@@ -25,14 +26,19 @@ PROJECT = 'jk-basecalling'
 TEAM="jkbc"
 PROJECT_PATH = f'{TEAM}/{PROJECT}'
 DEFAULT_CONFIG = 'config_default.yaml'
-DEVICE = torch.device("cuda") #m.get_available_gpu()
 
+DEVICE = torch.device("cuda") #m.get_available_gpu()
+ALPHABET = constants.ALPHABET
+ALPHABET_SIZE = len(ALPHABET.values())
+
+
+# -
 
 def run(data_set=DATA_SET, id=None, scale_output_to_size=None, epochs=20, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG):
     # Load default dictionary
     with open(config, 'r') as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
-    
+
     if id and not new: # Resume run from wandb
         wandb.init(config=config, resume='allow', id=id, entity=TEAM, project=PROJECT)
     else:              # Start new run
@@ -63,13 +69,13 @@ def run(data_set=DATA_SET, id=None, scale_output_to_size=None, epochs=20, new=Fa
         data_config = json.load(fp)
         window_size = int(data_config['maxw']) #maxw = max windowsize
 
-    ALPHABET          = constants.ALPHABET
-    ALPHABET_SIZE     = len(ALPHABET.values())
-
     # Get model
     model = __get_model(config, scale_output_to_size, window_size, device)
     config.parameters = m.get_parameter_count(model)
     print('Parameters:', config.parameters)
+    
+    config.time_predict = m.time_model_prediction(model, device)
+    print('Time:', config.time_predict)
     wandb.run.save()
     
     if config.max_parameters < config.parameters:
