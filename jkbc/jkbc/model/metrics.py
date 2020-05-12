@@ -34,17 +34,26 @@ class CtcLoss(Loss):
 
 class KdLoss(Loss):
     '''Konwledge distillation loss'''
-    def __init__(self, alpha: float, temperature: float, label_loss: Loss):
+    def __init__(self, alpha: float, temperature: float, label_loss: Loss, variant='logsoftmax'):
         """Args:
             alpha: How much the teacher controls the training. (1=teacher only, 0=no teacher)
             temperature: Used to smooth output from teacher
             label_loss: Instance of a Loss class
+            variant: 
+                - logsoftmax (or True): logsoftmax on teacher output
+                - softmax: softmax on teacher output
         """
+    
+        def get_softmax(variant):
+            if 'logsoftmax' == variant or variant is True:
+                return nn.LogSoftmax(dim=2)
+            elif 'softmax' == variant:
+                return nn.Softmax(dim=2)
         self.temperature = temperature
         self.label_weight = 1-alpha
         self.teacher_weight = alpha*temperature**2
-        self.softmax = nn.Softmax(dim=2)
-        self.log_softmax = nn.LogSoftmax(dim=2)
+        self.teacher_softmax = get_softmax('softmax')
+        self.student_softmax = get_softmax(variant)
         self.label_loss = label_loss.loss()
 
     def loss(self) -> functools.partial:
@@ -59,9 +68,9 @@ class KdLoss(Loss):
         return partial(__combined, self)
     
     def __knowledge_distillation_loss(self, y_pred_b: t.Tensor, y_teacher: t.Tensor3D) -> float:
-        soft_teacher = self.softmax(y_teacher/self.temperature)
-        log_soft_pred = self.log_softmax(y_pred_b/self.temperature)
-        loss = nn.KLDivLoss(reduction='batchmean')(log_soft_pred, soft_teacher)
+        soft_teacher = self.teacher_softmax(y_teacher/self.temperature)
+        soft_pred = self.student_softmax(y_pred_b/self.temperature)
+        loss = nn.KLDivLoss(reduction='batchmean')(soft_pred, soft_teacher)
         return loss
 
 class ErrorRate(Callback):

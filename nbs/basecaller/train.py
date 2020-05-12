@@ -34,10 +34,18 @@ ALPHABET_SIZE = len(ALPHABET.values())
 
 # -
 
-def run(data_set=DATA_SET, id=None, scale_output_to_size=None, epochs=20, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG):
+def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG, kd_method=None):
     # Load default dictionary
     with open(config, 'r') as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
+        
+    if kd_method is not None:
+        config['knowledge_distillation'] = kd_method
+    
+    if False == config['knowledge_distillation']:
+        # setting alpha and temperature to none to avoid confusion
+        config['kd_alpha'] = None
+        config['kd_temperature'] = None
 
     if id and not new: # Resume run from wandb
         wandb.init(config=config, resume='allow', id=id, entity=TEAM, project=PROJECT)
@@ -70,7 +78,7 @@ def run(data_set=DATA_SET, id=None, scale_output_to_size=None, epochs=20, new=Fa
         window_size = int(data_config['maxw']) #maxw = max windowsize
 
     # Get model
-    model = __get_model(config, scale_output_to_size, window_size, device)
+    model = __get_model(config, window_size, device)
     config.parameters = m.get_parameter_count(model)
     print('Parameters:', config.parameters)
     
@@ -83,8 +91,11 @@ def run(data_set=DATA_SET, id=None, scale_output_to_size=None, epochs=20, new=Fa
 
     # Loss, metrics and callback
     _ctc_loss = metric.CtcLoss(config.dimensions_out_scale, batch_size, ALPHABET_SIZE)
-    _kd_loss = metric.KdLoss(alpha=config.kd_alpha, temperature=config.kd_temperature, label_loss=_ctc_loss)
-    loss = _kd_loss.loss() if config.knowledge_distillation else _ctc_loss.loss()
+    if config.knowledge_distillation:
+        _kd_loss = metric.KdLoss(alpha=config.kd_alpha, temperature=config.kd_temperature, label_loss=_ctc_loss, variant=config.knowledge_distillation)
+        loss = _kd_loss.loss()
+    else:
+        loss = _ctc_loss.loss()
 
     metrics = [metric.read_identity(ALPHABET, 5)]
 
@@ -124,8 +135,7 @@ def __load_data(config, data_set, device, batch_size):
     return DataBunch(train_dl, valid_dl, device=device)
 
 
-def __get_model(config, scale_output_to_size, window_size, device):
-    config['model_params']['scale_output_to_size'] = int(scale_output_to_size) if scale_output_to_size else None
+def __get_model(config, window_size, device):
     model_params = utils.get_nested_dict(config, 'model_params')
     config.update({'model_params': model_params}, allow_val_change=True)
     model_config = bonito.get_bonito_config(config.model_params)

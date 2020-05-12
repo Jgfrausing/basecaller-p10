@@ -45,19 +45,12 @@ class Model(nn.Module):
         self.features = config['block'][-1]['filters']
         self.encoder = Encoder(config)
         self.decoder = Decoder(self.features, len(self.alphabet))
-        
-        if 'output_size' not in config or not config['output_size']:
-            self.compressor = None
-        else:
-            bonito_output = 1366
-            self.compressor = Compressor(bonito_output, config['output_size'])
-            print('Using compression')
+    
 
     def forward(self, x):
         encoded = self.encoder(x)
         decoded = self.decoder(encoded)
-        if self.compressor:
-            return self.compressor(decoded)
+
         return decoded
     
 class Compressor(nn.Module):
@@ -222,8 +215,7 @@ class Block(nn.Module):
         if self.use_res:
             _x += self.residual(x[0])
         return [self.activation(_x)]
-
-
+    
 class Decoder(Module):
     """
     Decoder

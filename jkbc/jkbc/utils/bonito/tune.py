@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import jkbc.types as t
-import uuid
-import hashlib
 def get_bonito_config(config: t.Dict):
     def convert_kernel_sizes(model_params):
         for k, v in model_params.items():
@@ -11,10 +9,9 @@ def get_bonito_config(config: t.Dict):
 
     config = convert_kernel_sizes(config)
     
+    model = {}
+    
     blocks = 3 + config['b_blocks']
-    values_str = ''.join([str(val) for val in config.values()])
-    hashed = hashlib.md5(values_str.encode()).hexdigest()
-    model = dict(model = hashed, output_size = config['scale_output_to_size'])
     model['block'] = [dict() for _ in range(blocks)]
     
     # Setting general values
@@ -61,44 +58,3 @@ def get_bonito_config(config: t.Dict):
     model['block'][-1]['filters'] = config['c3_filters']
     
     return model
-
-
-defult_model_config = dict(
-    b_blocks = 5,
-    dropout = 0.0,
-    
-    c1_stride = 3,
-    c1_kernel = 33,
-    c1_filters = 256,
-    
-    b1_repeat = 5,
-    b1_filters = 256,
-    b1_kernel = 33,
-    b1_dilation = 1,
-
-    b2_repeat = 5,
-    b2_filters = 256,
-    b2_kernel = 39,
-    b2_dilation = 1,
-
-    b3_repeat = 5,
-    b3_filters = 512,
-    b3_kernel = 51,
-    b3_dilation = 1,
-
-    b4_repeat = 5,
-    b4_filters = 512,
-    b4_kernel = 63,
-    b4_dilation = 1,
-
-    b5_repeat = 5,
-    b5_filters = 512,
-    b5_kernel = 75,
-    b5_dilation = 1,
-
-    c2_kernel = 87,
-    c2_filters = 512,
-    
-    c3_kernel = 1,
-    c3_filters = 1024,
-)

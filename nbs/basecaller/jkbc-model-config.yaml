@@ -1,0 +1,48 @@
+max_parameters: 5000000
+cycle: 4
+drop_last: true
+knowledge_distillation: true
+kd_alpha: 0.8306488115770243
+kd_temperature: 7
+learning_rate: 0.001964749099935746
+learning_rate_min: 0.00030761389392681515
+model_params:
+    dropout: 0.08132716707822446
+    b_blocks: 4
+    b1_groups: 4
+    b1_kernel: 53
+    b1_repeat: 3
+    b2_groups: 2
+    b2_kernel: 50
+    b2_repeat: 6
+    b3_groups: 4
+    b3_kernel: 37
+    b3_repeat: 5
+    b4_groups: 4
+    b4_kernel: 54
+    b4_repeat: 4
+    c1_kernel: 42
+    c1_stride: 3
+    c2_kernel: 28
+    c3_kernel: 18
+    b1_filters: 202
+    b1_shuffle: false
+    b2_filters: 128
+    b2_shuffle: true
+    b3_filters: 207
+    b3_shuffle: false
+    b4_filters: 169
+    b4_shuffle: false
+    c1_filters: 173
+    c2_filters: 141
+    c3_filters: 185
+    b1_dilation: 1
+    b2_dilation: 3
+    b3_dilation: 1
+    b4_dilation: 2
+momentum: 0.7523525634201865
+optimizer: AdamW
+pretrained_weights: null
+scheduler: annealing_cos_warmrestart
+teacher_name: bonito
+weight_decay: 0.159508960797818
