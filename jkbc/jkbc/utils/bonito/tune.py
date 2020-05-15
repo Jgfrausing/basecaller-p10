@@ -45,6 +45,7 @@ def get_bonito_config(config: t.Dict):
         model['block'][i]['filters'] = config[f'b{i}_filters']
         model['block'][i]['kernel'] = [config[f'b{i}_kernel']]
         model['block'][i]['dilation'] = [config[f'b{i}_dilation']]
+        model['block'][i]['groups'] = config[f'b{i}_groups']
         model['block'][i]['residual'] = True
         model['block'][i]['separable'] = True
 

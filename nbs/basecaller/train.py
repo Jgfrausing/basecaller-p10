@@ -38,6 +38,7 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
     # Load default dictionary
     with open(config, 'r') as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
+        print(config)
         
     if kd_method is not None:
         config['knowledge_distillation'] = kd_method
@@ -121,6 +122,11 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
 
     print('Epochs:', epochs)
     learner.fit(epochs, lr=config.learning_rate, wd=config.weight_decay)
+
+
+def run_multiple_configs(configs, data_set=DATA_SET):
+    for config in configs:
+        run(data_set=data_set, id=None, epochs=10, batch_size=170, config=config)
 
 
 def __load_data(config, data_set, device, batch_size):

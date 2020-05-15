@@ -122,9 +122,11 @@ def get_parameter_count(model):
     return sum(p.numel() for p in model.parameters())
 
 
-def time_model_prediction(model, device, count=20):
+def time_model_prediction(model, device, count=100):
+    ## count increased to 100 from 20 to increase accuracy.
+    ## we device by 5 to make the measure backwards compatible 
     import timeit
     signal = torch.ones(128, 4096, device=device)
     input = signal_to_input_tensor(signal, device)
     fn = lambda: model(input).detach().cpu()
-    return timeit.timeit(fn, number=count)
+    return timeit.timeit(fn, number=count)/5
