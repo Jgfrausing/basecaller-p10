@@ -24,10 +24,5 @@ def grouping(config):
     
     configs = list(_change_groups(config, [1,2,4,8], False))
     configs += list(_change_groups(config, [2,4,8], True))
-    return configs
-    for con in _change_groups(config, [1,2,4,8], False):
-        configs.append(con)
-    for con in _change_groups(config, [2,4,8], True):
-        configs.append(con)
-        
+    
     return configs
