@@ -22,6 +22,7 @@ import jkbc.utils as utils
 BASE_DIR = Path("../..")
 PATH_DATA = 'data/feather-files'
 DATA_SET = BASE_DIR/PATH_DATA/'Range0-10000-FixLabelLen400-winsize4096'
+DATA_SET_SMALL = BASE_DIR/PATH_DATA/'Range0-1000-FixLabelLen400-winsize4096'
 PROJECT = 'jk-basecalling'
 TEAM="jkbc"
 PROJECT_PATH = f'{TEAM}/{PROJECT}'
@@ -124,16 +125,18 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
     learner.fit(epochs, lr=config.learning_rate, wd=config.weight_decay)
 
 
-def run_multiple_configs(configs, data_set=DATA_SET):
+def run_multiple_configs(configs, data_set=DATA_SET_SMALL):
     for config in configs:
         run(data_set=data_set, id=None, epochs=10, batch_size=170, config=config)
 
 
-def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG, data_set=DATA_SET):
+def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG, data_set=DATA_SET_SMALL):
     with open(original_config, 'r') as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
         
     for c in factory.modify_config(function_identifier, config):
+        print(c)
+        continue
         run(data_set=data_set, id=None, epochs=10, batch_size=170, config=c)
 
 
