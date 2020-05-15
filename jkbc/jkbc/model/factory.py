@@ -7,6 +7,8 @@ def modify_config(identifier, config):
         return test_modifier(config)
     elif "GROUPING" == identifier:
         return grouping(config)
+    elif "KERNEL" == identifier:
+        return kernel_size(config)
     
 def test_modifier(config):
     ## Breaks run, because model will have too many parameters
@@ -26,3 +28,13 @@ def grouping(config):
     configs += list(_change_groups(config, [2,4,8], True))
     
     return configs
+
+def kernel_size(config):
+    def _change_groups(config, kernel_scales):
+        for scale in kernel_scales:
+            con = dict(config)
+            for block in [1,2,3,4,5]:
+                con['model_params'][f'b{block}_kernel'] = int(scale*con['model_params'][f'b{block}_kernel'])
+            yield con
+            
+    return list(_change_groups(config, [.95,.90,.85,.80,.75]))
