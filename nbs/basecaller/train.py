@@ -35,7 +35,7 @@ ALPHABET_SIZE = len(ALPHABET.values())
 
 # -
 
-def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG, kd_method=None):
+def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG, kd_method=None, tags=None):
     # Load default dictionary
     if type(config) is not dict:
         with open(config, 'r') as config_file:
@@ -50,9 +50,9 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
         config['kd_temperature'] = None
 
     if id and not new: # Resume run from wandb
-        wandb.init(config=config, resume='allow', id=id, entity=TEAM, project=PROJECT)
+        wandb.init(config=config, resume='allow', id=id, entity=TEAM, project=PROJECT, tags=tags)
     else:              # Start new run
-        wandb.init(config=config, resume='allow', entity=TEAM, project=PROJECT)
+        wandb.init(config=config, resume='allow', entity=TEAM, project=PROJECT, tags=tags)
     
     # Use sweep to restart multiple existing runs using ids
     if 'id' in wandb.config.keys():
@@ -130,13 +130,16 @@ def run_multiple_configs(configs, data_set=DATA_SET_SMALL):
         run(data_set=data_set, id=None, epochs=10, batch_size=170, config=config)
 
 
-def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG, data_set=DATA_SET_SMALL):
+def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG, data_set=DATA_SET_SMALL, tag=None):
     with open(original_config, 'r') as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
         
+    tags = [function_identifier]
+    if tag is not None:
+        tags.append(tag)
     for c in factory.modify_config(function_identifier, config):
         try:
-            run(data_set=data_set, id=None, epochs=10, batch_size=170, config=c)
+            run(data_set=data_set, id=None, epochs=10, batch_size=170, config=c, tags=tags)
         except Exception as e:
             print('config:', c)
             raise e
