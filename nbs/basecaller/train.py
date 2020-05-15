@@ -50,9 +50,9 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
         config['kd_temperature'] = None
 
     if id and not new: # Resume run from wandb
-        wandb.init(config=config, resume='allow', id=id, entity=TEAM, project=PROJECT, tags=tags)
+        wandb.init(config=config, resume='allow', id=id, entity=TEAM, project=PROJECT, tags=tags, reinit=True)
     else:              # Start new run
-        wandb.init(config=config, resume='allow', entity=TEAM, project=PROJECT, tags=tags)
+        wandb.init(config=config, resume='allow', entity=TEAM, project=PROJECT, tags=tags, reinit=True)
     
     # Use sweep to restart multiple existing runs using ids
     if 'id' in wandb.config.keys():
