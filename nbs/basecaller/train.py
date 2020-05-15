@@ -135,8 +135,6 @@ def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG, da
         config = yaml.load(config_file, Loader=yaml.FullLoader)
         
     for c in factory.modify_config(function_identifier, config):
-        print(c)
-        continue
         run(data_set=data_set, id=None, epochs=10, batch_size=170, config=c)
 
 
