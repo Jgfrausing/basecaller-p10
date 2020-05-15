@@ -36,9 +36,9 @@ ALPHABET_SIZE = len(ALPHABET.values())
 
 def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG, kd_method=None):
     # Load default dictionary
-    with open(config, 'r') as config_file:
-        config = yaml.load(config_file, Loader=yaml.FullLoader)
-        print(config)
+    if type(config) is not dict:
+        with open(config, 'r') as config_file:
+            config = yaml.load(config_file, Loader=yaml.FullLoader)
         
     if kd_method is not None:
         config['knowledge_distillation'] = kd_method
@@ -127,6 +127,14 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
 def run_multiple_configs(configs, data_set=DATA_SET):
     for config in configs:
         run(data_set=data_set, id=None, epochs=10, batch_size=170, config=config)
+
+
+def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG, data_set=DATA_SET):
+    with open(original_config, 'r') as config_file:
+        config = yaml.load(config_file, Loader=yaml.FullLoader)
+        
+    for c in factory.modify_config(function_identifier, config):
+        run(data_set=data_set, id=None, epochs=10, batch_size=170, config=c)
 
 
 def __load_data(config, data_set, device, batch_size):
