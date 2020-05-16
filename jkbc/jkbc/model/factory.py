@@ -81,6 +81,8 @@ def b_blocks(config):
 def filters(config):
     def _change_groups(config, filter_scales):
         for scale in filter_scales:
+            if scale == 1:
+                continue
             con = copy.deepcopy(config)
             con['max_parameters'] = 9999999999
             for block in B_BLOCKS_LST:
