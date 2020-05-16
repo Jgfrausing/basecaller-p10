@@ -82,6 +82,7 @@ def filters(config):
     def _change_groups(config, filter_scales):
         for scale in filter_scales:
             con = copy.deepcopy(config)
+            con['max_parameters'] = 9999999999
             for block in B_BLOCKS_LST:
                 con['model_params'][f'b{block}_filters'] = int(scale*config['model_params'][f'b{block}_filters'])
             yield con
