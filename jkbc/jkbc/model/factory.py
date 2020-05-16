@@ -53,7 +53,7 @@ def grouping(config):
                 con['model_params'][f'b{block}_shuffle'] = shuffle
             yield con
     
-    configs = list(_change_groups(config, [1,2,4,8], False))
+    configs = list(_change_groups(config, [4,2,8], False))
     configs += list(_change_groups(config, [2,4,8], True))
     
     return configs
@@ -86,7 +86,7 @@ def filters(config):
                 con['model_params'][f'b{block}_filters'] = int(scale*config['model_params'][f'b{block}_filters'])
             yield con
             
-    scales = list(np.arange(.5, 1, 0.05))
+    scales = list(np.arange(.5, 1.55, 0.05))
     return list(_change_groups(config, scales))
 
 def repeat(config):
