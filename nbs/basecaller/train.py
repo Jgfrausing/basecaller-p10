@@ -140,9 +140,10 @@ def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG, da
     for c in factory.modify_config(function_identifier, config):
         try:
             run(data_set=data_set, id=None, epochs=10, batch_size=170, config=c, tags=tags)
+            wandb.join()
         except Exception as e:
             print('config:', c)
-            raise e
+            print(e)
 
 
 def __load_data(config, data_set, device, batch_size):
