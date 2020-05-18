@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 import jkbc.types as t
-def get_bonito_config(config: t.Dict):
+def get_bonito_config(config: t.Dict, double_kernel_sizes: bool = True):
     def convert_kernel_sizes(model_params):
         for k, v in model_params.items():
             if 'kernel' in k:
                 model_params[k] = v*2+1
         return model_params
 
-    config = convert_kernel_sizes(config)
+    if double_kernel_sizes:
+      # Used for Wandb sweeps, which only outputs even integers.
+      config = convert_kernel_sizes(config)
     
     model = {}
     
