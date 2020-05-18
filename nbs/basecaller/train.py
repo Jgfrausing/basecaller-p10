@@ -18,15 +18,20 @@ import jkbc.utils.preprocessing as prep
 import jkbc.utils.bonito.tune as bonito
 import jkbc.utils as utils
 
+# Optimal setting for fast model predictions
+torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.deterministic= False
+
 # +
 BASE_DIR = Path("../..")
 PATH_DATA = 'data/feather-files'
 DATA_SET = BASE_DIR/PATH_DATA/'Range0-10000-FixLabelLen400-winsize4096'
-DATA_SET_SMALL = BASE_DIR/PATH_DATA/'Range0-1000-FixLabelLen400-winsize4096'
-PROJECT = 'jk-basecalling'
+DATA_SET_SMALL = BASE_DIR/PATH_DATA/'Range0-500-FixLabelLen400-winsize4096'
+PROJECT_V1 = 'jk-basecalling' 
+PROJECT_V2= 'jk-basecalling-v2'
 TEAM="jkbc"
-PROJECT_PATH = f'{TEAM}/{PROJECT}'
 DEFAULT_CONFIG = 'config_default.yaml'
+DEFAULT_CONFIG_MODIFIED = 'config_default_modified.yaml'
 
 DEVICE = torch.device("cuda") #m.get_available_gpu()
 ALPHABET = constants.ALPHABET
@@ -35,7 +40,10 @@ ALPHABET_SIZE = len(ALPHABET.values())
 
 # -
 
-def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG, kd_method=None, tags=None):
+def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG, kd_method=None, tags=[], project=PROJECT_V1):
+    PROJECT = project
+    PROJECT_PATH = f'{TEAM}/{PROJECT}'
+    
     # Load default dictionary
     if type(config) is not dict:
         with open(config, 'r') as config_file:
@@ -88,7 +96,7 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
     print('Time:', config.time_predict)
     wandb.run.save()
     
-    if config.max_parameters < config.parameters:
+    if config.max_parameters is not None and config.max_parameters < config.parameters:
         raise ValueError(f"Too many parameters ({config.parameters})")
 
     # Loss, metrics and callback
@@ -108,7 +116,7 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
     optimizer = optim.get_optimizer(config)
     scheduler = sched.get_scheduler(config, epochs)
 
-    learner = Learner(databunch, model, loss_func=loss, metrics=metrics, opt_func=optimizer, callback_fns=WandbCallback).to_fp16()
+    learner = Learner(databunch, model, loss_func=loss, metrics=metrics, opt_func=optimizer, callback_fns=WandbCallback)
     scheduler(learner)
 
     if wandb.run.resumed or new:
@@ -130,16 +138,19 @@ def run_multiple_configs(configs, data_set=DATA_SET_SMALL):
         run(data_set=data_set, id=None, epochs=10, batch_size=170, config=config)
 
 
-def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG, data_set=DATA_SET_SMALL, tag=None):
+def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG_MODIFIED, data_set=DATA_SET_SMALL, tags=[]):
     with open(original_config, 'r') as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
         
     tags = [function_identifier]
-    if tag is not None:
-        tags.append(tag)
-    for c in factory.modify_config(function_identifier, config):
+    if type(tags) is not list:
+        tags = [tags]
+    
+    configs, t = factory.modify_config(function_identifier, config)
+    for c in configs:
+        tags += t
         try:
-            run(data_set=data_set, id=None, epochs=10, batch_size=170, config=c, tags=tags)
+            run(data_set=data_set, id=None, epochs=10, batch_size=64, config=c, tags=tags, project=PROJECT_V2)
             wandb.join()
         except Exception as e:
             print('config:', c)

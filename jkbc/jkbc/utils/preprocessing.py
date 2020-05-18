@@ -86,7 +86,7 @@ def convert_to_dataloaders(data: ReadObject, split: float, batch_size: int, teac
     window_size = len(x[0])
         
     # Turn it into tensors
-    x = torch.as_tensor(x, dtype = torch.float16).view(windows, 1, window_size)
+    x = torch.as_tensor(x, dtype = torch.float32).view(windows, 1, window_size)
     x_lengths = torch.as_tensor(x_lengths, dtype = torch.long).view(windows, 1)
     
     y = torch.as_tensor(y, dtype = torch.long)

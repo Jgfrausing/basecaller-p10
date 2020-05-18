@@ -16,11 +16,11 @@ def model(window_size, device, definition: t.Union[dict, t.PathLike]):
     else:
         config = toml.load(definition)
     
-    model = Model(config).to(device=device).half()
-    test_input = torch.ones(1, 1, window_size, dtype=torch.float16, device=device)
-    test_output = model(test_input)
-    out_dimension = test_output.shape[1]
-    out_scale = math.ceil(window_size/out_dimension)
+    model = Model(config).to(device=device)
+    #test_input = torch.ones(1, 1, window_size, dtype=torch.float32, device=device)
+    #test_output = model(test_input)
+    #out_dimension = test_output.shape[1]
+    out_scale = 3 #math.ceil(window_size/out_dimension)
 
     return model, out_scale
 

@@ -76,9 +76,9 @@ def load_model_weights(model, model_path, model_name):
 
 def signal_to_input_tensor(signal, device):
     if type(signal) == torch.Tensor:
-        x = signal.to(device=device, dtype=torch.float16)
+        x = signal.to(device=device, dtype=torch.float32)
     else:
-        x = torch.tensor(signal, dtype=torch.float16, device=device)
+        x = torch.tensor(signal, dtype=torch.float32, device=device)
     
     return x.view(x.shape[0],1,x.shape[1])
 
@@ -126,7 +126,7 @@ def time_model_prediction(model, device, count=100):
     ## count increased to 100 from 20 to increase accuracy.
     ## we device by 5 to make the measure backwards compatible 
     import timeit
-    signal = torch.ones(128, 4096, device=device)
+    signal = torch.ones(64, 4096, device=device)
     input = signal_to_input_tensor(signal, device)
     fn = lambda: model(input).detach().cpu()
     return timeit.timeit(fn, number=count)/5
