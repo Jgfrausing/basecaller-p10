@@ -16,7 +16,9 @@ def modify_config(identifier, config):
         'REPEAT': repeat,
         'FILTERS': filters,
         'BBLOCKS': b_blocks,
-        'DILATION_KERNEL': dilation_and_kernel
+        'DILATION_1_KERNEL': dilation_1_and_kernel,
+        'DILATION_2_KERNEL': dilation_2_and_kernel,
+        'DILATION_3_KERNEL': dilation_3_and_kernel,
     }
     configs, tags = functions[identifier](config, [identifier])
     
@@ -99,8 +101,19 @@ def repeat(config, tags):
     
     return list(_change_groups(config, [1,2,3,4,6,7,8,9])), tags
 
-def dilation_and_kernel(config, tags):
-    def _change_groups(config, dilations, kernel_scales):
+def dilation_1_and_kernel(config, tags):         
+    scales = list(np.arange(.5, 1.6, 0.1))
+    return list(_change_dilation_and_kernel(config, [1], scales)), ['KERNEL', 'DILATION']
+
+def dilation_2_and_kernel(config, tags):         
+    scales = list(np.arange(.5, 1.6, 0.1))
+    return list(_change_dilation_and_kernel(config, [2], scales)), ['KERNEL', 'DILATION']
+
+def dilation_3_and_kernel(config, tags):         
+    scales = list(np.arange(.5, 1.6, 0.1))
+    return list(_change_dilation_and_kernel(config, [3], scales)), ['KERNEL', 'DILATION']
+
+def _change_dilation_and_kernel(config, dilations, kernel_scales):
         for dilation in dilations:
             for scale in kernel_scales:
                 if 1 == dilation and 1 == scale:
@@ -113,10 +126,7 @@ def dilation_and_kernel(config, tags):
                     kernel=int(config['model_params'][f'b{block}_kernel']*scale)
                     con['model_params'][f'b{block}_kernel'] = _calculate_kernel_size(dilation, kernel)
                 yield con
-            
-    scales = list(np.arange(.5, 1.6, 0.1))
-    return list(_change_groups(config, [1,2,3], scales)), ['KERNEL', 'DILATION']
-
+                
 def _calculate_kernel_size(dilation, old_kernel):
         '''
         (d_1-1)*(d-1)+d_1
