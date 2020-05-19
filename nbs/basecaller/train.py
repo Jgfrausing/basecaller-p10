@@ -142,7 +142,6 @@ def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG_MOD
     with open(original_config, 'r') as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
         
-    tags = [function_identifier]
     if type(tags) is not list:
         tags = [tags]
     
@@ -155,6 +154,15 @@ def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG_MOD
         except Exception as e:
             print('config:', c)
             print(e)
+
+
+def print_configs(function_identifier, original_config=DEFAULT_CONFIG_MODIFIED):
+    with open(original_config, 'r') as config_file:
+        config = yaml.load(config_file, Loader=yaml.FullLoader)
+        
+    configs, t = factory.modify_config(function_identifier, config)
+    for c in configs:
+        print(c)
 
 
 def __load_data(config, data_set, device, batch_size):
