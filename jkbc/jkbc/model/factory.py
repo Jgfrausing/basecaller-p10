@@ -12,6 +12,7 @@ B_BLOCKS_LST = [1,2,3,4,5]
 def modify_config(identifier, config):
     functions = {
         'TEST': test_modifier,
+        'BONITO': identity,
         'GROUPING': grouping,
         'REPEAT': repeat,
         'FILTERS': filters,
@@ -38,6 +39,9 @@ def __remove_duplicates(configs):
     for config in configs:
         hashed_configs[string_config(config)] = config
     return hashed_configs.values()
+
+def identity(config, tags):
+    return [config], tags
 
 def test_modifier(config, tags):
     ## Breaks run, because model will have too many parameters
