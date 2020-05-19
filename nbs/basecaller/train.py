@@ -26,7 +26,7 @@ torch.backends.cudnn.deterministic= False
 BASE_DIR = Path("../..")
 PATH_DATA = 'data/feather-files'
 DATA_SET = BASE_DIR/PATH_DATA/'Range0-10000-FixLabelLen400-winsize4096'
-DATA_SET_SMALL = BASE_DIR/PATH_DATA/'Range0-500-FixLabelLen400-winsize4096'
+DATA_SET_SMALL = BASE_DIR/PATH_DATA/'Range0-1000-FixLabelLen400-winsize4096'
 PROJECT_V1 = 'jk-basecalling' 
 PROJECT_V2= 'jk-basecalling-v2'
 TEAM="jkbc"
@@ -133,11 +133,6 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
     learner.fit(epochs, lr=config.learning_rate, wd=config.weight_decay)
 
 
-def run_multiple_configs(configs, data_set=DATA_SET_SMALL):
-    for config in configs:
-        run(data_set=data_set, id=None, epochs=10, batch_size=170, config=config)
-
-
 def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG_MODIFIED, data_set=DATA_SET_SMALL, tags=[]):
     with open(original_config, 'r') as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
@@ -149,7 +144,7 @@ def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG_MOD
     for c in configs:
         tags += t
         try:
-            run(data_set=data_set, id=None, epochs=10, batch_size=64, config=c, tags=tags, project=PROJECT_V2)
+            run(data_set=data_set, id=None, epochs=15, batch_size=64, config=c, tags=tags, project=PROJECT_V2)
             wandb.join()
         except Exception as e:
             print('config:', c)
