@@ -3,6 +3,7 @@ import yaml
 import json
 
 from fastai.basics import *
+from fastai.callbacks.tracker import EarlyStoppingCallback
 import wandb
 from wandb.fastai import WandbCallback
 # -
@@ -112,11 +113,14 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
     # Load data   
     databunch = __load_data(config, data_set, device, batch_size)
     
-    # Learner
+    # training
     optimizer = optim.get_optimizer(config)
     scheduler = sched.get_scheduler(config, epochs)
-
-    learner = Learner(databunch, model, loss_func=loss, metrics=metrics, opt_func=optimizer, callback_fns=WandbCallback)
+    early_stopper = partial(EarlyStoppingCallback, monitor='valid_loss', min_delta=0.01, patience=3)
+    callbacks = [early_stopper, WandbCallback]
+    
+    # Learner
+    learner = Learner(databunch, model, loss_func=loss, metrics=metrics, opt_func=optimizer, callback_fns=callbacks)
     scheduler(learner)
 
     if wandb.run.resumed or new:
@@ -133,18 +137,18 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
     learner.fit(epochs, lr=config.learning_rate, wd=config.weight_decay)
 
 
-def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG_MODIFIED, data_set=DATA_SET_SMALL, tags=[]):
+def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG_MODIFIED, data_set=DATA_SET_SMALL, tags=[]):    
     with open(original_config, 'r') as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
         
     if type(tags) is not list:
         tags = [tags]
-    
+        
     configs, t = factory.modify_config(function_identifier, config)
     for c in configs:
         tags += t
         try:
-            run(data_set=data_set, id=None, epochs=15, batch_size=64, config=c, tags=tags, project=PROJECT_V2)
+            run(data_set=data_set, id=None, epochs=30, batch_size=64, config=c, tags=tags, project=PROJECT_V2)
             wandb.join()
         except Exception as e:
             print('config:', c)

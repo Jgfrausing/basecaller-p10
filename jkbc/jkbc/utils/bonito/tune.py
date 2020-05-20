@@ -32,7 +32,7 @@ def get_bonito_config(config: t.Dict, double_kernel_sizes: bool = True):
     
     model['labels'] =  dict()
     model['labels']['labels'] = ["N", "A", "C", "G", "T"]
-    model['encoder'] = {'activation': 'gelu'}
+    model['encoder'] = {'activation': 'relu'}
     model['input'] = {'features': 1}
 
     # C1

@@ -6,6 +6,7 @@ from jkbc.model.architectures.bonito import model as bonito
 # -
 
 B_BLOCKS_LST = [1,2,3,4,5]
+SCALES = list(np.arange(.7, 1.4, 0.1))
 
 
 # +
@@ -13,13 +14,15 @@ def modify_config(identifier, config):
     functions = {
         'TEST': test_modifier,
         'BONITO': identity,
+        'SMALL': lambda c, t: (_change_filters(config, [0.5]), ['SMALL', 'FILTERS']),
+        'LARGE': lambda c, t: (_change_filters(config, [1.5]), ['LARGE', 'FILTERS']),
         'GROUPING': grouping,
         'REPEAT': repeat,
-        'FILTERS': filters,
+        'FILTERS': lambda c, t: (_change_filters(config, SCALES), t),
         'BBLOCKS': b_blocks,
-        'DILATION_1_KERNEL': dilation_1_and_kernel,
-        'DILATION_2_KERNEL': dilation_2_and_kernel,
-        'DILATION_3_KERNEL': dilation_3_and_kernel,
+        'DILATION_1_KERNEL': lambda c, t: (_change_dilation_and_kernel(config, [1], SCALES), t),
+        'DILATION_2_KERNEL': lambda c, t: (_change_dilation_and_kernel(config, [2], SCALES), t),
+        'DILATION_3_KERNEL': lambda c, t: (_change_dilation_and_kernel(config, [3], SCALES), t),
     }
     configs, tags = functions[identifier](config, [identifier])
     
@@ -81,19 +84,17 @@ def b_blocks(config, tags):
             
     return list(_change_config(config, [1,2,3,4])), tags
 
-def filters(config, tags):
-    def _change_config(config, filter_scales):
+def _change_filters(config, filter_scales):
+    def change(config, filter_scales):
         for scale in filter_scales:
             if scale == 1:
                 continue
             con = copy.deepcopy(config)
-            
+
             for block in B_BLOCKS_LST:
                 con['model_params'][f'b{block}_filters'] = int(scale*config['model_params'][f'b{block}_filters'])
             yield con
-            
-    scales = list(np.arange(.5, 1.6, 0.1))
-    return list(_change_config(config, scales)), tags
+    return list(change(config, filter_scales))
 
 def repeat(config, tags):
     def _change_groups(config, repeats):
@@ -105,38 +106,35 @@ def repeat(config, tags):
     
     return list(_change_groups(config, [1,2,3,4,6,7,8,9])), tags
 
-def dilation_1_and_kernel(config, tags):         
-    scales = list(np.arange(.5, 1.6, 0.1))
-    return list(_change_dilation_and_kernel(config, [1], scales)), ['KERNEL', 'DILATION']
-
-def dilation_2_and_kernel(config, tags):         
-    scales = list(np.arange(.5, 1.6, 0.1))
-    return list(_change_dilation_and_kernel(config, [2], scales)), ['KERNEL', 'DILATION']
-
-def dilation_3_and_kernel(config, tags):         
-    scales = list(np.arange(.5, 1.6, 0.1))
-    return list(_change_dilation_and_kernel(config, [3], scales)), ['KERNEL', 'DILATION']
-
 def _change_dilation_and_kernel(config, dilations, kernel_scales):
+    def change(config, dilations, kernel_scales):
         for dilation in dilations:
             for scale in kernel_scales:
                 if 1 == dilation and 1 == scale:
                     #No change
                     continue
-                    
+
                 con = copy.deepcopy(config)
                 for block in B_BLOCKS_LST:
                     con['model_params'][f'b{block}_dilation'] = dilation
                     kernel=int(config['model_params'][f'b{block}_kernel']*scale)
                     con['model_params'][f'b{block}_kernel'] = _calculate_kernel_size(dilation, kernel)
                 yield con
+    return list(change(config, dilations, kernel_scales))
                 
-def _calculate_kernel_size(dilation, old_kernel):
+def _calculate_kernel_size(dilation, simulated_kernel_size):
         '''
-        (d_1-1)*(d-1)+d_1
-        d_1: 1234       = 4
-        d_2: 1*2*3*4    = 7  = 3*1+4
-        d_3: 1**2**3**4 = 10 = 3*2+4
+        args:
+            dilation: dilation size
+            simulated_kernel_size: requested span of kernel when dilation is used
         '''
         
-        return int((old_kernel-1)*(dilation-1)+old_kernel)
+        '''
+        (kernel_size-1)*(dilation-1)+no_dilation = simulated_kernel_size
+        kernel_size = (simulated_kernel_size+dilation-1)/dilation
+                   wanted ks    sim ks               calculated ks  
+        1: 12345 = 5 => 1*0+5 = 5 => (4 + 1 - 1)/1 = 4
+        2: 1_2_3 = 3 => 2*1+3 = 5 => (4 + 2 - 1)/2 = 2.5
+        3: 1__2  = 2 => 1*2+2 = 4 => (4 + 3 - 1)/3 = 2
+        '''
+        return int((simulated_kernel_size + dilation - 1)/dilation)

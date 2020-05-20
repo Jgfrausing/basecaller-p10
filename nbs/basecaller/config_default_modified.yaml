@@ -46,9 +46,9 @@ model_params:
   c3_filters: 1024
   c3_kernel: 0
   dropout: 0.0
-momentum: 0.9
+momentum: 0.75
 optimizer: AdamW
 pretrained_weights: null
-scheduler: one_cycle
+scheduler: none
 teacher_name: null
 weight_decay: 0.1
