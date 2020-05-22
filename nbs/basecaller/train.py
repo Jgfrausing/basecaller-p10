@@ -144,15 +144,34 @@ def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG_MOD
     if type(tags) is not list:
         tags = [tags]
         
-    configs, t = factory.modify_config(function_identifier, config)
+    configs, tag = factory.modify_config(function_identifier, config)
+    tags += tag
+    run_configs(configs, tags)
+
+
+def run_configs(configs, tags):
     for c in configs:
-        tags += t
         try:
             run(data_set=data_set, id=None, epochs=30, batch_size=64, config=c, tags=tags, project=PROJECT_V2)
             wandb.join()
         except Exception as e:
             print('config:', c)
             print(e)
+
+
+def sweep(start_index, config_run_count = 50):
+    magic_seed_number = 42
+    function_identifiers = ['GROUPING','REPEAT','FILTERS','DILATION_KERNEL']
+    
+    with open(DEFAULT_CONFIG_MODIFIED, 'r') as config_file:
+        config = yaml.load(config_file, Loader=yaml.FullLoader)
+    configs = factory.random_permutation(function_identifiers, config)
+
+    np.random.seed(magic_seed_number)
+    selected_configs = np.random.permutation(configs)[start_index:start_index+config_run_count]
+    
+    print(selected_configs)
+    #run_configs(selected_configs, ['RANDOM_SWEEP'])
 
 
 def print_configs(function_identifier, original_config=DEFAULT_CONFIG_MODIFIED):

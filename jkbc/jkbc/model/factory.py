@@ -20,15 +20,65 @@ def modify_config(identifier, config):
         'REPEAT': repeat,
         'FILTERS': lambda c, t: (_change_filters(config, SCALES), t),
         'BBLOCKS': b_blocks,
+        'DILATION_KERNEL': lambda c, t: (_change_dilation_and_kernel(config, [1,2,3], SCALES), t),
         'DILATION_1_KERNEL': lambda c, t: (_change_dilation_and_kernel(config, [1], SCALES), t),
         'DILATION_2_KERNEL': lambda c, t: (_change_dilation_and_kernel(config, [2], SCALES), t),
         'DILATION_3_KERNEL': lambda c, t: (_change_dilation_and_kernel(config, [3], SCALES), t),
     }
     configs, tags = functions[identifier](config, [identifier])
     
-    return __remove_duplicates(configs), tags
+    return _remove_duplicates(configs), tags
 
-def __remove_duplicates(configs):
+def random_permutation(function_identifiers, config):
+    modified_fn = lambda fid, con: list(modify_config(fid, con)[0])
+    flatten = lambda l: list([item for sublist in l for item in sublist])
+    configs = [config]
+    
+    # Getting all permutations
+    for fn_id in function_identifiers:
+        configs = flatten([modified_fn(fn_id, c) for c in configs]) + configs
+        configs = list(_remove_duplicates(configs))
+    config_len = len(configs)
+    
+    # Getting all configs run without combinations
+    executed_configs = [config]
+    for fn_id in function_identifiers:
+        tmp = modified_fn(fn_id, config)
+        executed_configs += tmp
+    len_executed_configs = len(executed_configs)
+    
+    # Remove unwanted configs
+    configs_ = _remove_configs(configs,executed_configs)
+    new_config_len =  len(configs_)
+    assert config_len-new_config_len == len_executed_configs, f"Something went wrong: {config_len-new_config_len} != {new_config_len}"
+
+    return configs_
+
+def _string_config(d):
+        h = ''
+        for key, value in d.items():
+            if type(value) is dict:
+                h += _string_config(value)
+            else:
+                h += f'##{key}#{value}'
+        return h
+
+def _hash_configs(configs):
+    hashed_configs = {}
+    for config in configs:
+        hashed_configs[_string_config(config)] = config
+    return hashed_configs
+    
+def _remove_configs(a, b):
+    def remove(a,b):
+        return [v for k, v in a.items() if k not in b.keys()]
+    
+    hashed_a = _hash_configs(a)
+    hashed_b = _hash_configs(b)
+    
+    return remove(hashed_a, hashed_b)
+
+def _remove_duplicates(configs):
     def string_config(d):
         h = ''
         for value in d.values():
@@ -38,9 +88,7 @@ def __remove_duplicates(configs):
                 h += f'#{value}'
         return h
     
-    hashed_configs = {}
-    for config in configs:
-        hashed_configs[string_config(config)] = config
+    hashed_configs = _hash_configs(configs)
     return hashed_configs.values()
 
 def identity(config, tags):
