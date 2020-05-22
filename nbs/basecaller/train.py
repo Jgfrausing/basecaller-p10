@@ -146,10 +146,10 @@ def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG_MOD
         
     configs, tag = factory.modify_config(function_identifier, config)
     tags += tag
-    run_configs(configs, tags)
+    run_configs(configs, tags, data_set)
 
 
-def run_configs(configs, tags):
+def run_configs(configs, tags, data_set):
     for c in configs:
         try:
             run(data_set=data_set, id=None, epochs=30, batch_size=64, config=c, tags=tags, project=PROJECT_V2)
@@ -159,7 +159,7 @@ def run_configs(configs, tags):
             print(e)
 
 
-def sweep(start_index, config_run_count = 50):
+def sweep(start_index, config_run_count = 50, data_set=DATA_SET_SMALL):
     magic_seed_number = 42
     function_identifiers = ['GROUPING','REPEAT','FILTERS','DILATION_KERNEL']
     
@@ -170,7 +170,7 @@ def sweep(start_index, config_run_count = 50):
     np.random.seed(magic_seed_number)
     selected_configs = np.random.permutation(configs)[start_index:start_index+config_run_count]
     
-    run_configs(selected_configs, ['RANDOM_SWEEP'])
+    run_configs(selected_configs, ['RANDOM_SWEEP'], data_set)
 
 
 def print_configs(function_identifier, original_config=DEFAULT_CONFIG_MODIFIED):
