@@ -140,7 +140,9 @@ def _change_filters(config, filter_scales):
             con = copy.deepcopy(config)
 
             for block in B_BLOCKS_LST:
-                con['model_params'][f'b{block}_filters'] = int(scale*config['model_params'][f'b{block}_filters'])
+                filter_ = int(scale*config['model_params'][f'b{block}_filters'])
+                # We convert the filter st it is divisible with 8 in order to accommodate grouping of sizes up to 8
+                con['model_params'][f'b{block}_filters'] = filter_ - filter_ % 8
             yield con
     return list(change(config, filter_scales))
 
