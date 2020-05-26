@@ -8,7 +8,7 @@ def proc_df(df, y_fld=None, skip_flds=None, ignore_flds=None, do_scale=False, na
     # stolen from fastai.old
     # https://github.com/fastai/fastai/blob/master/old/fastai/structured.py
     if not ignore_flds: ignore_flds=[]
-    if not skip_flds: skip_flds=[]
+    if not skip_flds: skip_flds=[] 
     if subset: df = get_sample(df,subset)
     else: df = df.copy()
     ignored_flds = df.loc[:, ignore_flds]
@@ -47,7 +47,7 @@ def fix_missing(df, col, name, na_dict):
 def numericalize(df, col, name, max_n_cat):
     if not is_numeric_dtype(col) and ( max_n_cat is None or len(col.cat.categories)>max_n_cat):
         df[name] = pd.Categorical(col).codes+1
-        
+
 def set_rf_samples(n):
     from sklearn.ensemble import forest
     forest._generate_sample_indices = (lambda rs, n_samples:
