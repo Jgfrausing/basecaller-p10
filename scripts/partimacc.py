@@ -15,6 +15,14 @@ import os
 PERCENTILES = [0.1*v for v in range(11)]
 PP_PERCENTILES = ["{0:0.1f}".format(x) for x in PERCENTILES]
 PLOTS = []
+PARETO_CANDIDATES = [
+    'still-wave-269',
+    'wild-thunder-179',
+    'glamorous-moon-171',
+    'polar-sunset-199',
+    'denim-sunset-272',
+    'fresh-hill-273',
+]
 
 
 # +
@@ -24,7 +32,7 @@ def zip_figures(name):
         for plot in s:
             fn = f'{plot}.png'
             zf.write(fn)
-            os.remove(fn)
+            #os.remove(fn)
     PLOTS.clear()
     
 def save_figure(name):
@@ -62,13 +70,23 @@ def average(identifiers, x, y):
     return identifiers, avg_x, avg_y
 
 
+# +
 def select_tags(data, tags):
     indexNames = []
     for index, row in data.iterrows():
         if row['Tags'] not in tags:
             indexNames.append(index)
-    return data.drop(indexNames)
+    return data.copy().drop(indexNames)
 
+def select_names(data, names):
+    indexNames = []
+    for index, row in data.iterrows():
+        if row['Name'] not in names:
+            indexNames.append(index)
+    return data.copy().drop(indexNames)
+
+
+# -
 
 def get_matrix(identifiers, time, accuracy):
     rows = len(identifiers)
@@ -84,6 +102,10 @@ def get_matrix(identifiers, time, accuracy):
             
     return matrix
 features = [
+    {
+        'Name':'Bonito',
+        'Tags':['BONITO'],
+        'Params':['model_params.c1_stride']}, 
     {
         'Name':'Kernel size (Dilation 1)',
         'Tags':['DILATION_1_KERNEL'],
@@ -109,7 +131,7 @@ features = [
         'Tags':['REPEAT'],
         'Params':['model_params.b5_repeat']}
 ]
-data = pd.read_csv("../nbs/experiments/wandb/export-2020-05-25.csv")
+data = pd.read_csv("../nbs/experiments/wandb/export-2020-05-29.csv")
 data['time_predict'] = mp.normalise(data['time_predict'])
 data['valid_loss'] = mp.normalise(data['valid_loss'])
 
@@ -130,12 +152,19 @@ for index in range(len(features)):
     best_values[index] = torch.min(matrix, dim=0).values
 
 mp.get_matrix_plot(best_values, [x['Name'] for x in features], PP_PERCENTILES, 'Hyper parameters')
-save_figure(run['Name'])
+save_figure('Hyper parameters')
 
 # +
+bonito = select_tags(data, ['BONITO']).sort_values(by='valid_loss')
+bonito_time_acc = (list(bonito['time_predict']), list(bonito['valid_loss']))
 random_sweep = select_tags(data, ['RANDOM_SWEEP']).sort_values(by='valid_loss')
-accuracy = list(random_sweep['valid_loss'])
-time = list(random_sweep['time_predict'])
+
+pareto_candidates = select_names(data, PARETO_CANDIDATES).sort_values(by='valid_loss')
+pareto_candidates_time = list(pareto_candidates['time_predict'])
+pareto_candidates_accuracy = list(pareto_candidates['valid_loss'])
+
+time = list(random_sweep['time_predict']) + bonito_time_acc[0]
+accuracy = list(random_sweep['valid_loss']) + bonito_time_acc[1]
 
 def split_pareto_set(x, y):
     current_best = 1000
@@ -152,9 +181,20 @@ def split_pareto_set(x, y):
             
     return list(zip(*pareto_set)), list(zip(*others))
 
+def dominated_by(x, y, lst):
+    dominated_by_x = []
+    dominated_by_y = []
+    for x_, y_ in zip(lst[0], lst[1]):
+        if x_ > x and y_ > y:
+            dominated_by_x.append(x_)
+            dominated_by_y.append(y_)
+    return dominated_by_x, dominated_by_y
 pareto_set, others = split_pareto_set(time, accuracy)
+dominated = dominated_by(bonito_time_acc[0][0], bonito_time_acc[1][0], others)
 fig, ax = plt.subplots()
 
+ax.set_xticks([0.1*i for i in range(20)])
+ax.set_yticks([0.1*i for i in range(20)])
 ax.set_xlabel('Time')
 ax.set_ylabel('Loss')
 ax.set_title('Pareto Frontier', fontsize=12)
@@ -163,13 +203,26 @@ ax.set_ylim(0, 1)
 ax.set_xlim(0, 1)
 ax.grid(True)
 
-ax.scatter(*others)
-ax.scatter(*pareto_set)
+print(bonito_time_acc)
+
 ax.plot(*pareto_set)
+ax.scatter(*others, c='grey')
+#ax.scatter(*dominated)
+ax.scatter(*pareto_set)
+ax.scatter(pareto_candidates_time, pareto_candidates_accuracy)
+ax.scatter(*bonito_time_acc, color='red', s=80)
 
 save_figure('Pareto-frontier')
 # -
 
 zip_figures('plots')
+
+print(len([t for t in time if t < bonito_time_acc[0][0]]))
+
+print(len(pareto_candidates_time))
+
+
+
+
 
 

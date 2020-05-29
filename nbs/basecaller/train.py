@@ -41,7 +41,8 @@ ALPHABET_SIZE = len(ALPHABET.values())
 
 # -
 
-def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_size=340, config=DEFAULT_CONFIG, kd_method=None, tags=[], project=PROJECT_V1):
+def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_size=340, 
+        config=DEFAULT_CONFIG, kd_method=None, tags=[], project=PROJECT_V1, alter_kernel_sizes=True):
     PROJECT = project
     PROJECT_PATH = f'{TEAM}/{PROJECT}'
     
@@ -89,7 +90,7 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
         window_size = int(data_config['maxw']) #maxw = max windowsize
 
     # Get model
-    model = __get_model(config, window_size, device)
+    model = __get_model(config, window_size, device, alter_kernel_sizes)
     config.parameters = m.get_parameter_count(model)
     print('Parameters:', config.parameters)
     
@@ -108,7 +109,7 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
     else:
         loss = _ctc_loss.loss()
 
-    metrics = [metric.read_identity(ALPHABET, 5)]
+    metrics = [metric.read_identity(ALPHABET, 5), _ctc_loss.metric]
 
     # Load data   
     databunch = __load_data(config, data_set, device, batch_size)
@@ -116,7 +117,7 @@ def run(data_set=DATA_SET, id=None, epochs=20, new=False, device=DEVICE, batch_s
     # training
     optimizer = optim.get_optimizer(config)
     scheduler = sched.get_scheduler(config, epochs)
-    early_stopper = partial(EarlyStoppingCallback, monitor='valid_loss', min_delta=0.01, patience=3)
+    early_stopper = partial(EarlyStoppingCallback, monitor='ctc_loss', min_delta=0.01, patience=3)
     callbacks = [early_stopper, WandbCallback]
     
     # Learner
@@ -149,14 +150,15 @@ def run_modified_configs(function_identifier, original_config=DEFAULT_CONFIG_MOD
     run_configs(configs, tags, data_set)
 
 
-def run_configs(configs, tags, data_set):
+def run_configs(configs, tags, data_set, alter_kernel_sizes=True):
     for c in configs:
         try:
-            run(data_set=data_set, id=None, epochs=30, batch_size=64, config=c, tags=tags, project=PROJECT_V2)
+            run(data_set=data_set, id=None, epochs=30, batch_size=64, config=c, tags=tags, project=PROJECT_V2, alter_kernel_sizes=alter_kernel_sizes)
             wandb.join()
         except Exception as e:
             print('config:', c)
             print(e)
+            raise(e)
 
 
 def sweep(start_index, config_run_count = 50, data_set=DATA_SET_SMALL):
@@ -171,6 +173,32 @@ def sweep(start_index, config_run_count = 50, data_set=DATA_SET_SMALL):
     selected_configs = np.random.permutation(configs)[start_index:start_index+config_run_count]
     
     run_configs(selected_configs, ['RANDOM_SWEEP'], data_set)
+
+
+#def run_ids_with_knowledge_distillation(*ids, data_set=BASE_DIR/PATH_DATA/'Range0-100-FixLabelLen400-winsize4096'):
+def run_ids_with_knowledge_distillation(*ids, alpha=1, data_set=DATA_SET_SMALL):
+    configs = []
+    for id in ids:
+        config = wandb.restore('config.yaml', run_path=f"{TEAM}/{PROJECT_V2}/{id}", replace=True)
+        with open(config.name, 'r') as config_file:
+            config = yaml.load(config_file, Loader=yaml.FullLoader)
+
+        # Clean up dictionary
+        ## Remove wandb stuff
+        config = {k: v['value'] for k, v in config.items() if k not in ['wandb_version', '_wandb']}
+        ## Remove items to be generated in run
+        config = {k: v for k, v in config.items() if k not in ['time_predict', 'parameters','dimensions_out_scale']}
+
+        # Add knowledge distillation and remember original
+        config['knowledge_distillation'] = True
+        config['kd_temperature'] = 4
+        config['kd_alpha'] = alpha
+        config['teacher_name'] = 'bonito'
+        config['started_from'] = id
+
+        configs.append(config)
+    #print(*configs)
+    run_configs(configs, tags=['KNOWLEDGE_DISTILLATION', 'PARETO'], data_set=data_set, alter_kernel_sizes=False)
 
 
 def print_configs(function_identifier, original_config=DEFAULT_CONFIG_MODIFIED):
@@ -194,10 +222,10 @@ def __load_data(config, data_set, device, batch_size):
     return DataBunch(train_dl, valid_dl, device=device)
 
 
-def __get_model(config, window_size, device):
+def __get_model(config, window_size, device, double_kernel_sizes):
     model_params = utils.get_nested_dict(config, 'model_params')
     config.update({'model_params': model_params}, allow_val_change=True)
-    model_config = bonito.get_bonito_config(config.model_params)
+    model_config = bonito.get_bonito_config(config.model_params, double_kernel_sizes)
     model, config.dimensions_out_scale = factory.bonito(window_size, device, model_config)
 
     return model

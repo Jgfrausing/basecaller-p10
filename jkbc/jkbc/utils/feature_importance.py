@@ -109,7 +109,8 @@ def calculate_feature_importance(model, X_valid, y_valid, use_permutation, max_s
                   .reset_index()
                   .rename({'Feature':'cols', 'Importance':'imp'},axis=1))
 
-def train_regressor(X_train, y_train, n_estimators=40, min_samples_leaf=3, max_features=0.5):
-    m = RandomForestRegressor(n_estimators=n_estimators, min_samples_leaf=min_samples_leaf, max_features=max_features, n_jobs=-1, oob_score=True)
+def train_regressor(X_train, y_train, n_estimators=40, min_samples_leaf=3, max_features=0.5, max_depth=3):
+    m = RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth, min_samples_leaf=min_samples_leaf, max_features=max_features, n_jobs=-1, oob_score=True)
+    #m = RandomForestRegressor(n_estimators=n_estimators, min_samples_leaf=min_samples_leaf, max_features=max_features, n_jobs=-1, oob_score=True)
     m.fit(X_train, y_train)
     return m

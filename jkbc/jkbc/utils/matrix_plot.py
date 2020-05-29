@@ -4,7 +4,7 @@ import numpy as np
 
 
 # +
-def get_matrix_plot(data, row_labels, col_labels, feature='', normalise_column=False):
+def get_matrix_plot(data, row_labels, col_labels, feature='', normalise_column=False, vmin=0, vmax=100, round_ints=True, legend=False):
     def _normalise_column(data):
         col_normalised = data.clone().t()
         for col in range(len(col_normalised)):
@@ -18,9 +18,10 @@ def get_matrix_plot(data, row_labels, col_labels, feature='', normalise_column=F
     # Create figure
     fig = plt.figure()
     fig, ax = plt.subplots(figsize=(10,10))
-    cax = ax.matshow(colours, vmin=0, vmax=100, cmap='rainbow', interpolation='lanczos')
+    cax = ax.matshow(colours, vmin=vmin, vmax=vmax, cmap='rainbow', interpolation='lanczos')
     
-    #fig.colorbar(cax)
+    if legend:
+        fig.colorbar(cax)
 
     ax.set_yticks(range(len(row_labels)))
     ax.set_yticklabels(row_labels)
@@ -31,7 +32,8 @@ def get_matrix_plot(data, row_labels, col_labels, feature='', normalise_column=F
     ax.set_xlabel('Accuracy vs Speed\n>>-->>-->>')
 
     for (i, j), z in np.ndenumerate(data):
-        ax.text(j, i, int(z), ha='center', va='center')
+        val = int(z) if round_ints else "{0:0.1f}".format(z)            
+        ax.text(j, i, val, ha='center', va='center')
 
     plt.tight_layout()
     return plt

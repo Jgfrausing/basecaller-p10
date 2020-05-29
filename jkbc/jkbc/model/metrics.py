@@ -17,6 +17,36 @@ class Loss():
     def loss(self):
         pass
 
+class CtcMetric(Callback):
+    def __init__(self):
+        self.name = 'ctc_loss'
+        self.loss = 0
+        self.count = 0
+        self.can_set = False
+        
+    def reset_loss(self):
+        #self.loss, self.count = 0, 0
+        self.can_set = False
+        
+    def set_loss(self, loss):
+        if self.can_set:
+            self.loss += loss
+            self.count += 1
+        
+    def on_batch_begin(self, **kwargs):
+        # If we are not training (e.i we are validating), we allow set_loss
+        self.can_set = not kwargs['train'] if 'train' in kwargs else False
+        
+    def on_epoch_end(self, last_metrics, **kwargs):
+        "Set the final result in `last_metrics`."
+        mean_loss = self.loss/self.count if self.count != 0 else 0
+        self.loss = 0
+        self.count = 0
+        self.can_set = False
+            
+        return add_metrics(last_metrics, mean_loss.cpu())
+
+
 class CtcLoss(Loss):
     '''CTC loss'''
     def __init__(self, prediction_scale, batch_size: int, alphabet_size:int):
@@ -24,13 +54,20 @@ class CtcLoss(Loss):
         self.batch_size = batch_size
         self.alphabet_size = alphabet_size
         self.log_softmax = nn.LogSoftmax(dim=2)
+        self.metric = CtcMetric()
     
     def loss(self) -> functools.partial:
-        def __ctc_loss(alphabet_size: int, pred: torch.Tensor, labels: torch.Tensor, pred_lengths, label_lengths) -> float:
+        def ctc_loss(alphabet_size: int, metric: CtcMetric, *tensors) -> float: #pred: torch.Tensor, labels: torch.Tensor, pred_lengths, label_lengths) -> float:
+            if len(tensors) == 4:
+                pred, labels, pred_lengths, label_lengths = tensors
+            else:
+                pred, labels, pred_lengths, label_lengths, _ = tensors
             pred_lengths = pred_lengths/self.input_to_output_scale
             
-            return nn.CTCLoss()(self.log_softmax(pred).transpose(1,0), labels, pred_lengths, label_lengths)
-        return partial(__ctc_loss, self.alphabet_size)
+            loss = nn.CTCLoss()(self.log_softmax(pred).transpose(1,0), labels, pred_lengths, label_lengths)
+            metric.set_loss(loss)
+            return loss
+        return partial(ctc_loss, self.alphabet_size, self.metric)
 
 class KdLoss(Loss):
     '''Konwledge distillation loss'''
@@ -62,7 +99,7 @@ class KdLoss(Loss):
             label_loss = self.label_loss(pred, labels, pred_lengths, label_lengths)
             
             teacher_loss = self.__knowledge_distillation_loss(pred, y_teacher)
-            loss = self.label_weight*label_loss+self.teacher_weight*teacher_loss
+            loss = self.label_weight*label_loss+self.teacher_weight*(teacher_loss/10000)
             return loss
         
         return partial(__combined, self)

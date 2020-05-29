@@ -8,7 +8,7 @@ def get_bonito_config(config: t.Dict, double_kernel_sizes: bool = True):
         return model_params
 
     if double_kernel_sizes:
-      # Used for Wandb sweeps, which only outputs even integers.
+      # Used for Wandb sweeps, which also outputs even integers.
       config = convert_kernel_sizes(config)
     
     model = {}
