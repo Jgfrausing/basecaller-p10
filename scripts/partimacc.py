@@ -35,9 +35,9 @@ def zip_figures(name):
             #os.remove(fn)
     PLOTS.clear()
     
-def save_figure(name):
+def save_figure(name, transparent=True):
     PLOTS.append(name)
-    plt.savefig(name)
+    plt.savefig(name, transparent=transparent)
 
 
 # -
@@ -86,8 +86,7 @@ def select_names(data, names):
     return data.copy().drop(indexNames)
 
 
-# -
-
+# +
 def get_matrix(identifiers, time, accuracy):
     rows = len(identifiers)
     cols = len(PERCENTILES)
@@ -131,9 +130,18 @@ features = [
         'Tags':['REPEAT'],
         'Params':['model_params.b5_repeat']}
 ]
-data = pd.read_csv("../nbs/experiments/wandb/export-2020-05-29.csv")
+
+
+data = pd.read_csv("../nbs/experiments/wandb/wandb_export_2020-05-30T15_21_48.620+02_00.csv")
+
+# Use only finished runs with an valid loss and time_predict
+data = data[data.State == 'finished']
+data = data[data.valid_loss.notnull()]
+data = data[data.time_predict.notnull()]
+
 data['time_predict'] = mp.normalise(data['time_predict'])
 data['valid_loss'] = mp.normalise(data['valid_loss'])
+# -
 
 best_values = torch.zeros(len(features), len(PERCENTILES))
 for index in range(len(features)):
