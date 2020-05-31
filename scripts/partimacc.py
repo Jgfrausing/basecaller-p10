@@ -37,7 +37,7 @@ def zip_figures(name):
     
 def save_figure(name, transparent=True):
     PLOTS.append(name)
-    plt.savefig(name, transparent=transparent)
+    plt.savefig(name, transparent=transparent, bbox_inches='tight', pad_inches=0)
 
 
 # -
@@ -228,9 +228,3 @@ zip_figures('plots')
 print(len([t for t in time if t < bonito_time_acc[0][0]]))
 
 print(len(pareto_candidates_time))
-
-
-
-
-
-
