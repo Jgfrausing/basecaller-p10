@@ -24,6 +24,8 @@ def modify_config(identifier, config):
         'DILATION_1_KERNEL': lambda c, t: (_change_dilation_and_kernel(config, [1], SCALES), t),
         'DILATION_2_KERNEL': lambda c, t: (_change_dilation_and_kernel(config, [2], SCALES), t),
         'DILATION_3_KERNEL': lambda c, t: (_change_dilation_and_kernel(config, [3], SCALES), t),
+        'REPEAT_EXTRA_6_7_8': lambda c, t: repeat_extra(c, t, [6, 7, 8]),
+        'REPEAT_EXTRA_9_10_11': lambda c, t: repeat_extra(c, t, [9, 10, 11]),
     }
     configs, tags = functions[identifier](config, [identifier])
     
@@ -188,3 +190,16 @@ def _calculate_kernel_size(dilation, simulated_kernel_size):
         3: 1__2  = 2 => 1*2+2 = 4 => (4 + 3 - 1)/3 = 2
         '''
         return int((simulated_kernel_size + dilation - 1)/dilation)
+
+      
+      
+def repeat_extra(config, tags, values):
+    print(f"Starting runs with the following extra repeats: {values}.")
+    def _change_groups(config, repeats):
+        for repeat in repeats:
+            con = copy.deepcopy(config)
+            for block in B_BLOCKS_LST:
+                con['model_params'][f'b{block}_repeat'] = repeat
+            yield con
+    
+    return list(_change_groups(config, values)), tags
