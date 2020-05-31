@@ -176,27 +176,29 @@ def sweep(start_index, config_run_count = 50, data_set=DATA_SET_SMALL):
 
 
 #def run_ids_with_knowledge_distillation(*ids, data_set=BASE_DIR/PATH_DATA/'Range0-100-FixLabelLen400-winsize4096'):
-def run_ids_with_knowledge_distillation(*ids, alpha=1, data_set=DATA_SET_SMALL):
+def run_ids_with_knowledge_distillation(*ids, alpha=1, data_set=DATA_SET_SMALL, all_alphas=False):
     configs = []
+    alphas = [.25,.5,.75,1] if all_alphas else [alpha]
     for id in ids:
-        config = wandb.restore('config.yaml', run_path=f"{TEAM}/{PROJECT_V2}/{id}", replace=True)
-        with open(config.name, 'r') as config_file:
-            config = yaml.load(config_file, Loader=yaml.FullLoader)
+        for a in alphas:
+            config = wandb.restore('config.yaml', run_path=f"{TEAM}/{PROJECT_V2}/{id}", replace=True)
+            with open(config.name, 'r') as config_file:
+                config = yaml.load(config_file, Loader=yaml.FullLoader)
 
-        # Clean up dictionary
-        ## Remove wandb stuff
-        config = {k: v['value'] for k, v in config.items() if k not in ['wandb_version', '_wandb']}
-        ## Remove items to be generated in run
-        config = {k: v for k, v in config.items() if k not in ['time_predict', 'parameters','dimensions_out_scale']}
+            # Clean up dictionary
+            ## Remove wandb stuff
+            config = {k: v['value'] for k, v in config.items() if k not in ['wandb_version', '_wandb']}
+            ## Remove items to be generated in run
+            config = {k: v for k, v in config.items() if k not in ['time_predict', 'parameters','dimensions_out_scale']}
 
-        # Add knowledge distillation and remember original
-        config['knowledge_distillation'] = True
-        config['kd_temperature'] = 4
-        config['kd_alpha'] = alpha
-        config['teacher_name'] = 'bonito'
-        config['started_from'] = id
+            # Add knowledge distillation and remember original
+            config['knowledge_distillation'] = True
+            config['kd_temperature'] = 4
+            config['kd_alpha'] = a
+            config['teacher_name'] = 'bonito'
+            config['started_from'] = id
 
-        configs.append(config)
+            configs.append(config)
     #print(*configs)
     run_configs(configs, tags=['KNOWLEDGE_DISTILLATION', 'PARETO'], data_set=data_set, alter_kernel_sizes=False)
 
