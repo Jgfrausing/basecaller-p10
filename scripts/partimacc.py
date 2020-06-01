@@ -37,7 +37,7 @@ def zip_figures(name):
     
 def save_figure(name, transparent=True):
     PLOTS.append(name)
-    plt.savefig(name, transparent=transparent)
+    plt.savefig(name, transparent=transparent, bbox_inches='tight', pad_inches=0)
 
 
 # -
@@ -266,5 +266,4 @@ print(len(one_mutation[0]))
 
 
 
-
-
+print(len(pareto_candidates_time))
