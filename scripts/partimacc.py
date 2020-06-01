@@ -132,7 +132,7 @@ features = [
 ]
 
 
-data = pd.read_csv("../nbs/experiments/wandb/wandb_export_2020-05-30T15_21_48.620+02_00.csv")
+data = pd.read_csv("../nbs/experiments/wandb/wandb-2020-05-30.csv")
 
 # Use only finished runs with an valid loss and time_predict
 data = data[data.State == 'finished']
@@ -141,6 +141,7 @@ data = data[data.time_predict.notnull()]
 
 data['time_predict'] = mp.normalise(data['time_predict'])
 data['valid_loss'] = mp.normalise(data['valid_loss'])
+data
 # -
 
 best_values = torch.zeros(len(features), len(PERCENTILES))
@@ -162,17 +163,14 @@ for index in range(len(features)):
 mp.get_matrix_plot(best_values, [x['Name'] for x in features], PP_PERCENTILES, 'Hyper parameters')
 save_figure('Hyper parameters')
 
+
 # +
-bonito = select_tags(data, ['BONITO']).sort_values(by='valid_loss')
-bonito_time_acc = (list(bonito['time_predict']), list(bonito['valid_loss']))
-random_sweep = select_tags(data, ['RANDOM_SWEEP']).sort_values(by='valid_loss')
-
-pareto_candidates = select_names(data, PARETO_CANDIDATES).sort_values(by='valid_loss')
-pareto_candidates_time = list(pareto_candidates['time_predict'])
-pareto_candidates_accuracy = list(pareto_candidates['valid_loss'])
-
-time = list(random_sweep['time_predict']) + bonito_time_acc[0]
-accuracy = list(random_sweep['valid_loss']) + bonito_time_acc[1]
+def get_time_acc(data):
+    copied = data.sort_values(by='valid_loss').copy()
+    time = list(copied['time_predict'])
+    loss =  list(copied['valid_loss'])
+    
+    return time, loss
 
 def split_pareto_set(x, y):
     current_best = 1000
@@ -197,8 +195,20 @@ def dominated_by(x, y, lst):
             dominated_by_x.append(x_)
             dominated_by_y.append(y_)
     return dominated_by_x, dominated_by_y
-pareto_set, others = split_pareto_set(time, accuracy)
-dominated = dominated_by(bonito_time_acc[0][0], bonito_time_acc[1][0], others)
+
+feature_tags=[]
+for f in features:
+    for tag in f['Tags']:
+        feature_tags.append(tag)
+feature_tags = list(set(feature_tags))
+
+bonito = get_time_acc(select_tags(data, ['BONITO']))
+one_mutation = get_time_acc(select_tags(data, feature_tags))
+pareto_candidates = get_time_acc(select_names(data, PARETO_CANDIDATES))
+all_labels = get_time_acc(data)
+
+pareto_set, others = split_pareto_set(*all_labels)
+dominated = dominated_by(bonito[0][0], bonito[1][0], others)
 fig, ax = plt.subplots()
 
 ax.set_xticks([0.1*i for i in range(20)])
@@ -211,23 +221,47 @@ ax.set_ylim(0, 1)
 ax.set_xlim(0, 1)
 ax.grid(True)
 
-print(bonito_time_acc)
 
 ax.plot(*pareto_set)
 ax.scatter(*others, c='grey')
-#ax.scatter(*dominated)
+ax.scatter(*dominated)
 ax.scatter(*pareto_set)
-ax.scatter(pareto_candidates_time, pareto_candidates_accuracy)
-ax.scatter(*bonito_time_acc, color='red', s=80)
+ax.scatter(*one_mutation)
+ax.scatter(*pareto_candidates)
+ax.scatter(*bonito, color='red', s=80)
 
 save_figure('Pareto-frontier')
+
+# +
+fig, ax = plt.subplots()
+
+ax.set_xticks([0.1*i for i in range(20)])
+ax.set_yticks([0.1*i for i in range(20)])
+ax.set_xlabel('Time')
+ax.set_ylabel('Loss')
+ax.set_title('Pareto Frontier (subset)', fontsize=12)
+
+ax.set_ylim(0, 1)
+ax.set_xlim(0, 1)
+ax.grid(True)
+
+print(bonito_time_acc)
+
+ax.plot(*pareto_set)
+#ax.scatter(*others, c='grey')
+#ax.scatter(*dominated)
+ax.scatter(*pareto_set)
+ax.scatter(*pareto_candidates)
+ax.scatter(*bonito_time_acc, color='red', s=80)
+
+save_figure('Pareto-frontier-subset')
 # -
 
 zip_figures('plots')
 
 print(len([t for t in time if t < bonito_time_acc[0][0]]))
 
-print(len(pareto_candidates_time))
+print(len(one_mutation[0]))
 
 
 
