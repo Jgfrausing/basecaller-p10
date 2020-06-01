@@ -3,7 +3,14 @@ import torch
 import numpy as np
 
 
-# +
+fontfamily = 'serif'
+fontweight_text = 'roman'
+fontweight_label = 'semibold'
+fontweight_title = 'bold'
+fontsize_text = 15
+fontsize_label = 1.2 * fontsize_text
+fontsize_title = 1.6 * fontsize_text
+
 def get_matrix_plot(data, row_labels, col_labels, feature='', normalise_column=False, vmin=0, vmax=100, round_ints=True, legend=False):
     def _normalise_column(data):
         col_normalised = data.clone().t()
@@ -24,19 +31,22 @@ def get_matrix_plot(data, row_labels, col_labels, feature='', normalise_column=F
         fig.colorbar(cax)
 
     ax.set_yticks(range(len(row_labels)))
-    ax.set_yticklabels(row_labels)
-    ax.set_ylabel(feature)
+    ax.set_yticklabels(row_labels, fontsize=fontsize_text, fontfamily=fontfamily, fontweight=fontweight_text)
+    ax.set_ylabel(feature, fontsize=fontsize_label, fontfamily=fontfamily, fontweight=fontweight_label)
     
     ax.set_xticks(range(len(col_labels)))
-    ax.set_xticklabels(col_labels)
-    ax.set_xlabel('Accuracy vs Speed\n>>-->>-->>')
+    ax.set_xticklabels(col_labels, fontsize=fontsize_text, fontfamily=fontfamily, fontweight=fontweight_text)
+    ax.set_xlabel('Accuracy vs. Speed', fontsize=fontsize_label, fontfamily=fontfamily, fontweight=fontweight_label)
+    
+    #ax.set_title(feature, fontsize=fontsize_title, fontfamily=fontfamily, fontweight=fontweight_title)
 
     for (i, j), z in np.ndenumerate(data):
         val = int(z) if round_ints else "{0:0.1f}".format(z)            
-        ax.text(j, i, val, ha='center', va='center')
-
+        ax.text(j, i, val, ha='center', va='center', fontsize=fontsize_text, fontweight=fontweight_text, fontfamily=fontfamily)
+        
     plt.tight_layout()
     return plt
+  
     
 def normalise(lst):
     min_, max_ = min(lst), max(lst)
