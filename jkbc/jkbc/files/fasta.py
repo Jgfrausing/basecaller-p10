@@ -19,16 +19,15 @@ def map_decoded(predict_object, alphabet_values: t.List[str], assembly=False) ->
     references = {}
     predictions= {}
     divider = '#'
-    for index in tqdm(range(len(predict_object.predictions))):
-        key = predict_object.id+divider+str(index)
-        references[key] = pop.convert_idx_to_base_sequence(predict_object.references[index], alphabet_values)
-        predictions[key] = predict_object.predictions[index]
-
     if assembly:
         key = predict_object.id+divider+'assembled'
         references[key] = pop.convert_idx_to_base_sequence(predict_object.full_reference, alphabet_values)
         predictions[key] = predict_object.assembled
-
+    else:
+        for index in tqdm(range(len(predict_object.predictions))):
+            key = predict_object.id+divider+str(index)
+            references[key] = pop.convert_idx_to_base_sequence(predict_object.references[index], alphabet_values)
+            predictions[key] = predict_object.predictions[index]
     return references, predictions
 
 

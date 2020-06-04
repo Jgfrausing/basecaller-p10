@@ -20,7 +20,14 @@ def get_predicter(model, device, root_dir):
 
 def predict_and_assemble(model, x: t.Tensor, alphabet: str, window_size, stride, beam_size = 25, beam_threshold=0.1) -> t.Tuple[str, t.Tensor2D]:
     # Predict signals
-    pred = model(x).detach().cpu()
+    model.eval()
+    pred = None
+    for x_ in range(0,x.shape[0],64):
+        pred_ = model(x[x_:x_+64]).detach().cpu()
+        if pred is None:
+            pred = pred_
+        else:
+            pred = torch.cat((pred, pred_), 0)
     # Decode into characters using beam search
     decoded = pop.decode(pred, alphabet, beam_size=beam_size, threshold=beam_threshold)
     # Assemble most likely sequence
@@ -42,8 +49,9 @@ def get_accuracies(refs, seqs, alphabet_values, return_alignment=False):
         
     return accuracy
 
-def predict_range(model, signal_collection, alphabet_string, window_size, device, indexes=None, beam_size=25, beam_threshold=0.1) -> t.List[pop.PredictObject]:
-    if indexes is None or len(indexes) > len(signal_collention): 
+def predict_range(model, signal_collection, alphabet_string, window_size, device, indexes=None, 
+                  beam_size=25, beam_threshold=0.1) -> t.List[pop.PredictObject]:
+    if indexes is None or len(indexes) > len(signal_collection): 
         indexes = range(len(signal_collection))
         print(f"Warning: predicting all {indexes} signals")
             

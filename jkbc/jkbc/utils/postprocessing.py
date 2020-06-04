@@ -50,6 +50,8 @@ def assemble(reads: t.List[str], window_size: int, stride: int, alphabet: t.Dict
 def convert_idx_to_base_sequence(lst: t.List[int], alphabet: t.List[str]) -> str:
     """Converts a list of base indexes into a str given an alphabet, e.g. [1, 0, 1, 3] -> 'A-AG'"""
 
+    if len(lst) == 0:
+        return []
     assert max(lst) < len(
         alphabet), "List contains indexes larger than alphabet size - 1."
     assert min(lst) >= 0, "List contains negative indexes."
