@@ -58,15 +58,14 @@ def load_data(path, measure):
     df_trn, y_trn, nas = proc_df(df_raw, measure)
     return df_raw, df_trn, y_trn
 
-def convert_data(df_raw, df_trn, y_trn, train_pct = .8):
+def convert_data(df_trn, y_trn, train_pct = .8):
     def split_vals(data,split): 
         return data[:split], data[split:]
-    n_trn = int(len(df_raw)*train_pct)
+    n_trn = int(len(df_trn)*train_pct)
     X_train, X_valid = split_vals(df_trn, n_trn)
     y_train, y_valid = split_vals(y_trn, n_trn)
-    raw_train, raw_valid = split_vals(df_raw, n_trn)
     
-    return (X_train, X_valid), (y_train, y_valid), (raw_train, raw_valid)
+    return (X_train, X_valid), (y_train, y_valid)
 
 def get_score(m, X_train, y_train, X_valid, y_valid):
     def rmse(x,y): return math.sqrt(((x-y)**2).mean())
@@ -109,8 +108,8 @@ def calculate_feature_importance(model, X_valid, y_valid, use_permutation, max_s
                   .reset_index()
                   .rename({'Feature':'cols', 'Importance':'imp'},axis=1))
 
-def train_regressor(X_train, y_train, n_estimators=40, min_samples_leaf=3, max_features=0.5, max_depth=3):
-    m = RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth, min_samples_leaf=min_samples_leaf, max_features=max_features, n_jobs=-1, oob_score=True)
+def train_regressor(X_train, y_train, n_estimators=40, min_samples_leaf=3, max_features=0.8):
+    m = RandomForestRegressor(n_estimators=n_estimators, min_samples_leaf=min_samples_leaf, max_features=max_features, n_jobs=-1, oob_score=True)
     #m = RandomForestRegressor(n_estimators=n_estimators, min_samples_leaf=min_samples_leaf, max_features=max_features, n_jobs=-1, oob_score=True)
     m.fit(X_train, y_train)
     return m

@@ -25,7 +25,7 @@ def get_matrix_plot(data, row_labels, col_labels, feature='', normalise_column=F
     # Create figure
     fig = plt.figure()
     fig, ax = plt.subplots(figsize=(10,10))
-    cax = ax.matshow(colours, vmin=vmin, vmax=vmax, cmap='rainbow', interpolation='lanczos')
+    cax = ax.matshow(colours, vmin=vmin, vmax=vmax, cmap='rainbow')#, interpolation='lanczos')
     
     if legend:
         fig.colorbar(cax)

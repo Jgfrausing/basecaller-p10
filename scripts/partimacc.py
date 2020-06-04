@@ -12,7 +12,7 @@ import zipfile
 import io
 import os
 
-PERCENTILES = [0.1*v for v in range(11)]
+PERCENTILES = [0,1]
 PP_PERCENTILES = ["{0:0.1f}".format(x) for x in PERCENTILES]
 PLOTS = []
 PARETO_CANDIDATES = [
@@ -74,7 +74,7 @@ def average(identifiers, x, y):
 def select_tags(data, tags):
     indexNames = []
     for index, row in data.iterrows():
-        if row['Tags'] not in tags:
+        if tags[0] not in row['Tags']:
             indexNames.append(index)
     return data.copy().drop(indexNames)
 
@@ -131,59 +131,74 @@ features = [
         'Params':['model_params.b5_repeat']}
 ]
 
+def normalise(lst):
+    min_, max_ = min(lst), max(lst)
+    return [(i/max_) for i in lst]
 
-data = pd.read_csv("../nbs/experiments/wandb/wandb-2020-05-30.csv")
+data = pd.read_csv("../nbs/experiments/wandb/grid.csv")
 
 # Use only finished runs with an valid loss and time_predict
 data = data[data.State == 'finished']
 data = data[data.valid_loss.notnull()]
 data = data[data.time_predict.notnull()]
 
-data['time_predict'] = mp.normalise(data['time_predict'])
-data['valid_loss'] = mp.normalise(data['valid_loss'])
-data
-# -
+norm_time = normalise(data['time_predict'])
+norm_loss = normalise(data['valid_loss'])
+data['error_over_time'] = normalise([v/t for v, t in zip(norm_time, norm_loss)])
 
+# +
 best_values = torch.zeros(len(features), len(PERCENTILES))
+
 for index in range(len(features)):
     run = features[index]
     # Selecting data
     run_data = select_tags(data, run['Tags']).sort_values(by=run['Params'])
     identifiers = list(zip(*(map(lambda x: list(run_data[x]), run['Params']))))
-    accuracy = list(run_data['valid_loss'])
-    time = list(run_data['time_predict'])
-    matrix = get_matrix(identifiers, time, accuracy)
+    error_over_time = list(run_data['error_over_time'])
+    matrix = torch.tensor(error_over_time).reshape(len(identifiers), 1)
     
     # Get plot
-    mp.get_matrix_plot(matrix, identifiers, PP_PERCENTILES, run['Name'])
+    mp.get_matrix_plot(matrix, identifiers, ["hello"], run['Name'], vmin=40,vmax=100)
     save_figure(run['Name'])
-    # Save best of each percentile
-    best_values[index] = torch.min(matrix, dim=0).values
+# -
 
 mp.get_matrix_plot(best_values, [x['Name'] for x in features], PP_PERCENTILES, 'Hyper parameters')
 save_figure('Hyper parameters')
 
+# +
+import math
+data = pd.read_csv("../nbs/experiments/wandb/final.csv")
+
+data = data[data.State == 'finished'].copy()
+data = data[data.time_predict.notnull()]
+
+data['valid_loss'] = [valid if math.isnan(ctc) else ctc for valid, ctc in zip(data['valid_loss'],data['ctc_loss'])]
+data = data[data.valid_loss < 0.3]
+data['time_predict'] = normalise(data['time_predict'])
+data['valid_loss'] = normalise(data['valid_loss'])
+
 
 # +
+
 def get_time_acc(data):
     copied = data.sort_values(by='valid_loss').copy()
     time = list(copied['time_predict'])
     loss =  list(copied['valid_loss'])
-    
-    return time, loss
+    identifier =  list(copied['Name'])
+    return time, loss, identifier
 
-def split_pareto_set(x, y):
+def split_pareto_set(x, y, identifier):
     current_best = 1000
     pareto_set = []
     others = []
-    zipped = list(zip(x, y))
+    zipped = list(zip(x, y, identifier))
     zipped.sort(key=lambda tup: tup[0])
-    for x_, y_ in zipped:
+    for x_, y_, id_ in zipped:
         if y_ < current_best:
             current_best = y_
-            pareto_set.append((x_, y_))
+            pareto_set.append((x_, y_, id_))
         else:
-            others.append((x_, y_))
+            others.append((x_, y_, id_))
             
     return list(zip(*pareto_set)), list(zip(*others))
 
@@ -203,33 +218,37 @@ for f in features:
 feature_tags = list(set(feature_tags))
 
 bonito = get_time_acc(select_tags(data, ['BONITO']))
-one_mutation = get_time_acc(select_tags(data, feature_tags))
-pareto_candidates = get_time_acc(select_names(data, PARETO_CANDIDATES))
+kd = get_time_acc(select_tags(data, ['KNOWLEDGE_DISTILLATION']))
+random_sweep = get_time_acc(select_tags(data, ['RANDOM_SWEEP']))
+one_mutation = get_time_acc(select_tags(data, ['GRID']))
+#one_mutation = get_time_acc(select_tags(data, feature_tags))
+#pareto_candidates = get_time_acc(select_names(data, PARETO_CANDIDATES))
 all_labels = get_time_acc(data)
 
 pareto_set, others = split_pareto_set(*all_labels)
-dominated = dominated_by(bonito[0][0], bonito[1][0], others)
+#dominated = dominated_by(bonito[0][0], bonito[1][0], others)
 fig, ax = plt.subplots()
 
-ax.set_xticks([0.1*i for i in range(20)])
-ax.set_yticks([0.1*i for i in range(20)])
+#ax.set_xticks([0.1*i for i in range(20)])
+#ax.set_yticks([0.1*i for i in range(20)])
 ax.set_xlabel('Time')
 ax.set_ylabel('Loss')
 ax.set_title('Pareto Frontier', fontsize=12)
 
-ax.set_ylim(0, 1)
-ax.set_xlim(0, 1)
+ax.set_ylim(0.3, 1)
+#ax.set_xlim(0.1, 1)
 ax.grid(True)
 
 
-ax.plot(*pareto_set)
-ax.scatter(*others, c='grey')
-ax.scatter(*dominated)
-ax.scatter(*pareto_set)
-ax.scatter(*one_mutation)
-ax.scatter(*pareto_candidates)
-ax.scatter(*bonito, color='red', s=80)
-
+#ax.plot(*pareto_set[:2])
+#ax.scatter(*others[:2], c='grey')
+#ax.scatter(*pareto_set[:2], c='blue')
+ax.scatter(*random_sweep[:2], c='pink')
+ax.scatter(*kd[:2], c='green')
+ax.scatter(*one_mutation[:2],  c='blue')
+ax.scatter(*bonito[:2], color='red', s=80)
+ax.scatter(*pareto_set[:2], c='cyan')
+print(pareto_set[2])
 save_figure('Pareto-frontier')
 
 # +
@@ -245,14 +264,13 @@ ax.set_ylim(0, 1)
 ax.set_xlim(0, 1)
 ax.grid(True)
 
-print(bonito_time_acc)
 
 ax.plot(*pareto_set)
 #ax.scatter(*others, c='grey')
 #ax.scatter(*dominated)
 ax.scatter(*pareto_set)
 ax.scatter(*pareto_candidates)
-ax.scatter(*bonito_time_acc, color='red', s=80)
+ax.scatter(*bonito, color='red', s=80)
 
 save_figure('Pareto-frontier-subset')
 # -
