@@ -6,23 +6,40 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import torch
-import jkbc.utils.matrix_plot as mp
 import sys
 import zipfile
 import io
 import os
+import math
+from cycler import cycler
 
 PERCENTILES = [0,1]
 PP_PERCENTILES = ["{0:0.1f}".format(x) for x in PERCENTILES]
 PLOTS = []
-PARETO_CANDIDATES = [
-    'still-wave-269',
-    'wild-thunder-179',
-    'glamorous-moon-171',
-    'polar-sunset-199',
-    'denim-sunset-272',
-    'fresh-hill-273',
+BONITOS = [    
+    '2j9fzbx4', #swept-durian-82 - Bonito
+    '117mrxzu', #sparkling-terrain-405 - Bonito_KD
 ]
+JKBC = [
+    '2eiadj4y', #eternal-deluge-448 - JKBC1
+    '1ywu3vo9', #breezy-cosmos-408 - JKBC2
+    '2d84exku', #scarlet-sound-417 - JKBC3
+    'j6f2sn3v', #vibrant-puddle-433 - JKBC4
+    '1c2vr2my', #playful-oath-434 - JKBC5
+]
+JK_Blue   = '#5975A4'
+JK_Red    = '#B55D60'
+JK_Green  = '#5F9E6E'
+JK_Orange = '#CC8963'
+JK_Purple = '#867AAB'
+JK_Brown  = '#8D7967'
+JK_Pink   = '#D195C0'
+
+JK_COLORS = [JK_Blue, JK_Red, JK_Green, JK_Orange, JK_Purple, JK_Brown, JK_Pink]
+COLOR_CYCLER = cycler(color=JK_COLORS)
+
+TIME_AXIS_LABEL = 'Prediction Time'
+LOSS_AXIS_LABEL = 'CTC Loss'
 
 
 # +
@@ -40,151 +57,24 @@ def save_figure(name, transparent=True):
     plt.savefig(name, transparent=transparent, bbox_inches='tight', pad_inches=0)
 
 
-# -
-
-def average(identifiers, x, y):
-    def _average(lst):
-        return sum(lst)/len(lst)
-
-    combined = zip(identifier, x, y)
-
-    identifier_dict = {}
-    for i, x_, y_ in combined:
-        if i in identifier_dict:
-            identifier_dict[i][0].append(x_)
-            identifier_dict[i][1].append(y_)
-        else:
-            identifier_dict[i] = [[x_], [y_]]
-
-    average_combined = []
-    for i, lst in identifier_dict.items():
-        avg_x = _average(lst[0])
-        avg_y = _average(lst[1])
-        average_combined.append((i,avg_x,avg_y))
-
-    average_combined.sort(key=lambda tup: tup[0])
-    identifiers = [tup[0] for tup in average_combined]
-    avg_x = [tup[1] for tup in average_combined]
-    avg_y = [tup[2] for tup in average_combined]
-    
-    return identifiers, avg_x, avg_y
-
-
 # +
-def select_tags(data, tags):
+def select_data(data, value, by_column='Tags'):
     indexNames = []
     for index, row in data.iterrows():
-        if tags[0] not in row['Tags']:
+        if type(value) is bool:
+            if value != row[by_column]:
+                indexNames.append(index)
+            else:
+                continue
+        elif value not in row[by_column]:
             indexNames.append(index)
     return data.copy().drop(indexNames)
 
-def select_names(data, names):
-    indexNames = []
-    for index, row in data.iterrows():
-        if row['Name'] not in names:
-            indexNames.append(index)
-    return data.copy().drop(indexNames)
-
-
-# +
-def get_matrix(identifiers, time, accuracy):
-    rows = len(identifiers)
-    cols = len(PERCENTILES)
-    matrix = torch.zeros(rows, cols)
-
-    # val = alp*time+(1-alp)acc
-    for row in range(rows):
-        for col in range(cols):
-            alpha = PERCENTILES[col]
-            
-            matrix[row,col] = int((time[row]*alpha + (1-alpha)*accuracy[row])*100)
-            
-    return matrix
-features = [
-    {
-        'Name':'Bonito',
-        'Tags':['BONITO'],
-        'Params':['model_params.c1_stride']}, 
-    {
-        'Name':'Kernel size (Dilation 1)',
-        'Tags':['DILATION_1_KERNEL'],
-        'Params':['model_params.b5_dilation', 'model_params.b5_kernel']}, 
-    {
-        'Name':'Kernel size (Dilation 2)',
-        'Tags':['DILATION_2_KERNEL'],
-        'Params':['model_params.b5_dilation', 'model_params.b5_kernel']}, 
-    {
-        'Name':'Kernel size (Dilation 3)',
-        'Tags':['DILATION_3_KERNEL'],
-        'Params':['model_params.b5_dilation', 'model_params.b5_kernel']}, 
-    {
-        'Name':'Shuffle and Grouping',
-        'Tags':['GROUPING'],
-        'Params': ['model_params.b5_shuffle', 'model_params.b5_groups']},
-    {
-        'Name':'Number of Kernels',
-        'Tags':['FILTERS'],
-        'Params':['model_params.b5_filters']},
-    {
-        'Name':'Repeat',
-        'Tags':['REPEAT'],
-        'Params':['model_params.b5_repeat']}
-]
-
-def normalise(lst):
-    min_, max_ = min(lst), max(lst)
-    return [(i/max_) for i in lst]
-
-data = pd.read_csv("../nbs/experiments/wandb/grid.csv")
-
-# Use only finished runs with an valid loss and time_predict
-data = data[data.State == 'finished']
-data = data[data.valid_loss.notnull()]
-data = data[data.time_predict.notnull()]
-
-norm_time = normalise(data['time_predict'])
-norm_loss = normalise(data['valid_loss'])
-data['error_over_time'] = normalise([v/t for v, t in zip(norm_time, norm_loss)])
-
-# +
-best_values = torch.zeros(len(features), len(PERCENTILES))
-
-for index in range(len(features)):
-    run = features[index]
-    # Selecting data
-    run_data = select_tags(data, run['Tags']).sort_values(by=run['Params'])
-    identifiers = list(zip(*(map(lambda x: list(run_data[x]), run['Params']))))
-    error_over_time = list(run_data['error_over_time'])
-    matrix = torch.tensor(error_over_time).reshape(len(identifiers), 1)
-    
-    # Get plot
-    mp.get_matrix_plot(matrix, identifiers, ["hello"], run['Name'], vmin=40,vmax=100)
-    save_figure(run['Name'])
-# -
-
-mp.get_matrix_plot(best_values, [x['Name'] for x in features], PP_PERCENTILES, 'Hyper parameters')
-save_figure('Hyper parameters')
-
-# +
-import math
-data = pd.read_csv("../nbs/experiments/wandb/final.csv")
-
-data = data[data.State == 'finished'].copy()
-data = data[data.time_predict.notnull()]
-
-data['valid_loss'] = [valid if math.isnan(ctc) else ctc for valid, ctc in zip(data['valid_loss'],data['ctc_loss'])]
-data = data[data.valid_loss < 0.3]
-data['time_predict'] = normalise(data['time_predict'])
-data['valid_loss'] = normalise(data['valid_loss'])
-
-
-# +
-
-def get_time_acc(data):
-    copied = data.sort_values(by='valid_loss').copy()
-    time = list(copied['time_predict'])
-    loss =  list(copied['valid_loss'])
-    identifier =  list(copied['Name'])
+def get_truple(data, x='time_predict',y='valid_loss', z='Name'):
+    copied = data.sort_values(by=y).copy()
+    time = list(copied[x])
+    loss =  list(copied[y])
+    identifier =  list(copied[z])
     return time, loss, identifier
 
 def split_pareto_set(x, y, identifier):
@@ -202,86 +92,152 @@ def split_pareto_set(x, y, identifier):
             
     return list(zip(*pareto_set)), list(zip(*others))
 
-def dominated_by(x, y, lst):
-    dominated_by_x = []
-    dominated_by_y = []
-    for x_, y_ in zip(lst[0], lst[1]):
-        if x_ > x and y_ > y:
-            dominated_by_x.append(x_)
-            dominated_by_y.append(y_)
-    return dominated_by_x, dominated_by_y
+def normalise(lst, max_val):
+    return [(i/max_val) for i in lst]
 
-feature_tags=[]
-for f in features:
-    for tag in f['Tags']:
-        feature_tags.append(tag)
-feature_tags = list(set(feature_tags))
-
-bonito = get_time_acc(select_tags(data, ['BONITO']))
-kd = get_time_acc(select_tags(data, ['KNOWLEDGE_DISTILLATION']))
-random_sweep = get_time_acc(select_tags(data, ['RANDOM_SWEEP']))
-one_mutation = get_time_acc(select_tags(data, ['GRID']))
-#one_mutation = get_time_acc(select_tags(data, feature_tags))
-#pareto_candidates = get_time_acc(select_names(data, PARETO_CANDIDATES))
-all_labels = get_time_acc(data)
-
-pareto_set, others = split_pareto_set(*all_labels)
-#dominated = dominated_by(bonito[0][0], bonito[1][0], others)
-fig, ax = plt.subplots()
-
-#ax.set_xticks([0.1*i for i in range(20)])
-#ax.set_yticks([0.1*i for i in range(20)])
-ax.set_xlabel('Time')
-ax.set_ylabel('Loss')
-ax.set_title('Pareto Frontier', fontsize=12)
-
-ax.set_ylim(0.3, 1)
-#ax.set_xlim(0.1, 1)
-ax.grid(True)
+def add_labels(lst):
+    for time, loss, label in zip(*lst):
+        ax.annotate(label, xy=(time, loss), ha='center', xytext=(0, 10), textcoords='offset pixels')
 
 
-#ax.plot(*pareto_set[:2])
-#ax.scatter(*others[:2], c='grey')
-#ax.scatter(*pareto_set[:2], c='blue')
-ax.scatter(*random_sweep[:2], c='pink')
-ax.scatter(*kd[:2], c='green')
-ax.scatter(*one_mutation[:2],  c='blue')
-ax.scatter(*bonito[:2], color='red', s=80)
-ax.scatter(*pareto_set[:2], c='cyan')
-print(pareto_set[2])
-save_figure('Pareto-frontier')
+# -
+
+# # Get Data
 
 # +
+data = pd.read_csv("./wandb/random_grid_bonito_kd_temperature.csv")
+
+# Use only finished runs with an valid loss and time_predict
+data = data[data.State == 'finished']
+data = data[data.valid_loss.notnull()]
+data = data[data.time_predict.notnull()]
+data['valid_loss'] = [valid if math.isnan(ctc) else ctc for valid, ctc in zip(data['valid_loss'],data['ctc_loss'])]
+#data = data[data.valid_loss < 0.3]
+
+max_time = 6.697
+max_loss = 0.3864
+data['time_predict'] = normalise(data['time_predict'], max_time)
+data['valid_loss'] = normalise(data['valid_loss'], max_loss)
+# -
+
+# # Experiment 1
+
+# ## Pareto set 1
+
+# +
+bonito = get_truple(select_data(data, 'BONITO'))
+random_sweep = get_truple(select_data(data, 'RANDOM_SWEEP'))
+pareto_set, others = split_pareto_set(*random_sweep)
+
 fig, ax = plt.subplots()
+ax.set_prop_cycle(COLOR_CYCLER)
+ax.set_xlabel(TIME_AXIS_LABEL)
+ax.set_ylabel(LOSS_AXIS_LABEL)
 
-ax.set_xticks([0.1*i for i in range(20)])
-ax.set_yticks([0.1*i for i in range(20)])
-ax.set_xlabel('Time')
-ax.set_ylabel('Loss')
-ax.set_title('Pareto Frontier (subset)', fontsize=12)
-
-ax.set_ylim(0, 1)
-ax.set_xlim(0, 1)
+ax.set_ylim(0.3, .85)
+ax.set_xlim(0.1, 1)
 ax.grid(True)
 
+ax.plot(*pareto_set[:2], c=JK_COLORS[0], linestyle=':')
+ax.scatter(*random_sweep[:2], s=100, c=JK_COLORS[0], edgecolors='black')
+ax.scatter(*bonito[:2], s=100, c=JK_COLORS[1], edgecolors='black')
+print(pareto_set[2])
+save_figure('Pareto-set-1')
+# -
 
-ax.plot(*pareto_set)
-#ax.scatter(*others, c='grey')
-#ax.scatter(*dominated)
-ax.scatter(*pareto_set)
-ax.scatter(*pareto_candidates)
-ax.scatter(*bonito, color='red', s=80)
+# ## Importance
 
-save_figure('Pareto-frontier-subset')
+importance = pd.read_csv('wandb/importance.csv')
+fig, (ax1, ax2) = plt.subplots(1, 2)
+ax1.barh(importance['hp'], importance['importance'], color=JK_Blue, edgecolor='black')
+ax1.set_title("Importance")
+correlation_colors = [JK_Green if x < 0 else JK_Red for x in importance['correlation']]
+ax2.barh(importance['hp'], importance['correlation'], tick_label="", color=correlation_colors, edgecolor='black')
+ax2.set_title("Correlation")
+fig.tight_layout()
+plt.savefig('importance.png')
+
+# # Experiment 2
+
+# ## Dilation
+
+# +
+d1 = get_truple(select_data(data, 'DILATION_1_KERNEL'))
+d2 = get_truple(select_data(data, 'DILATION_2_KERNEL'))
+d3 = get_truple(select_data(data, 'DILATION_3_KERNEL'))
+
+bonito = get_truple(select_data(data, 'BONITO'))
+fig, ax = plt.subplots()
+
+ax.set_xlabel('Kernel size')
+ax.set_ylabel(LOSS_AXIS_LABEL)
+
+ax.grid(True)
+
+ax.scatter(*d1[:2], s=100, label='D=1', c=JK_COLORS[0], edgecolors='black')
+ax.scatter(*d2[:2], s=100, label='D=2', c=JK_COLORS[2], edgecolors='black')
+ax.scatter(*d3[:2], s=100, label='D=3', c=JK_COLORS[3], edgecolors='black')
+ax.scatter(*bonito[:2], s=100, label='Bonito', c=JK_Red, edgecolors='black')
+ax.legend()
+save_figure('dilation-kernel')
+# -
+
+# ## Grouping
+
+# +
+grouping_data = select_data(data, 'GROUPING')
+grouping_data['model_params.b1_shuffle']
+shuffle = get_truple(select_data(grouping_data, True, 'model_params.b1_shuffle'), z='model_params.b1_groups')
+noshuffle = get_truple(select_data(grouping_data, False, 'model_params.b1_shuffle'), z='model_params.b1_groups')
+bonito = get_truple(select_data(grouping_data, 'BONITO'), z='model_params.b1_groups')
+
+fig, ax = plt.subplots()
+
+ax.set_xlabel(TIME_AXIS_LABEL)
+ax.set_ylabel(LOSS_AXIS_LABEL)
+
+ax.grid(True)
+
+ax.scatter(*shuffle[:2], s=100, label='Shuffle', c=JK_COLORS[0], edgecolors='black')
+add_labels(shuffle)
+
+ax.scatter(*noshuffle[:2], s=100, label='No shuffle', c=JK_COLORS[2], edgecolors='black')
+add_labels(noshuffle)
+    
+ax.scatter(*bonito[:2], s=100, label='Bonito', c=JK_Red, edgecolors='black')
+add_labels(bonito)
+
+ax.legend()
+save_figure('grouping')
+# -
+
+# ## Pareto set 2
+
+# +
+bonito = get_truple(select_data(data, 'BONITO'))
+random_sweep = get_truple(select_data(data, 'RANDOM_SWEEP'))
+grid = get_truple(select_data(data, 'GRID'))
+pareto_set, _ = split_pareto_set(*random_sweep)
+combined = get_truple(pd.concat([select_data(data, 'RANDOM_SWEEP'), select_data(data, 'GRID')]))
+pareto_set_new, _ = split_pareto_set(*combined)
+
+
+fig, ax = plt.subplots()
+ax.set_prop_cycle(COLOR_CYCLER)
+ax.set_xlabel(TIME_AXIS_LABEL)
+ax.set_ylabel(LOSS_AXIS_LABEL)
+
+ax.set_ylim(0.3, .85)
+ax.set_xlim(0.1, 1)
+ax.grid(True)
+
+ax.plot(*pareto_set_new[:2], c='black', linestyle='-')
+ax.plot(*pareto_set[:2], c=JK_COLORS[0], linestyle=':')
+ax.scatter(*random_sweep[:2], s=30, c=JK_COLORS[0], edgecolors='black')
+ax.scatter(*grid[:2], s=100, c=JK_COLORS[2], edgecolors='black')
+ax.scatter(*bonito[:2], s=100, c=JK_COLORS[1], edgecolors='black')
+print(pareto_set_new[2])
+save_figure('Pareto-set-2')
 # -
 
 zip_figures('plots')
-
-print(len([t for t in time if t < bonito_time_acc[0][0]]))
-
-print(len(one_mutation[0]))
-
-
-
-
-print(len(pareto_candidates_time))
