@@ -1,0 +1,1 @@
+{"f": 0, "t": "50", "minl": 200, "maxl": 400, "minw": 1600, "maxw": 4096, "s": 500, "o": "data/feather-files/", "run_test": false, "exclude": ["Bacillus"], "data_path": "../mapped_reads/mapped_reads.hdf5", "bacteria_dict": "../mapped_reads/readid_to_bacteria.json"}
