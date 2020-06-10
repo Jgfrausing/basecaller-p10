@@ -90,7 +90,7 @@ def get_model(config, window_size, device, run_path, root):
 
 
 # %%
-def run(id, data_set, data_name='unknow_data_name', batch_size=64):
+def run(id, data_set, batch_size=64):
     run_path = f"{TEAM}/{PROJECT}/{id}"
     root=f'wandb/{id}'
     
@@ -98,7 +98,7 @@ def run(id, data_set, data_name='unknow_data_name', batch_size=64):
 
     window_size = get_window_size(data_set)
     data = f.load_training_data(data_set) 
-    test_dl, _ = prep.convert_to_dataloaders(data, split=.1, batch_size=batch_size, drop_last=True)
+    test_dl, _ = prep.convert_to_dataloaders(data, split=1, batch_size=batch_size, drop_last=True)
 
     config = get_config(run_path, root)
     model = get_model(config, window_size, DEVICE, run_path, root)
@@ -106,9 +106,9 @@ def run(id, data_set, data_name='unknow_data_name', batch_size=64):
     predictions, labels = predict(model, test_dl, alphabet, 
                                   beam_size = 25, beam_threshold=0.1)
 
-    save(id, data_name, labels, predictions)
+    save(id, 'test-data', labels, predictions)
 
 
 # %%
 if __name__ == '__main__':
-  fire.Fire(run)
+    fire.Fire(run)
